@@ -20,15 +20,19 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.linuxtools.docker.core.Activator;
 import org.eclipse.linuxtools.docker.core.DockerConnectionManager;
 import org.eclipse.linuxtools.docker.core.DockerException;
 import org.eclipse.linuxtools.docker.core.EnumDockerLoggingStatus;
 import org.eclipse.linuxtools.docker.core.IDockerConnection;
+import org.eclipse.linuxtools.docker.core.IDockerContainer;
 import org.eclipse.linuxtools.docker.core.IDockerContainerExit;
 import org.eclipse.linuxtools.docker.core.IDockerContainerInfo;
 import org.eclipse.linuxtools.docker.core.IDockerHostConfig;
 import org.eclipse.linuxtools.docker.core.IDockerPortBinding;
+import org.eclipse.linuxtools.docker.ui.IDockerConnectionPreferenceConstants;
 import org.eclipse.linuxtools.internal.docker.core.DockerConnection;
 import org.eclipse.linuxtools.internal.docker.core.DockerContainerConfig;
 import org.eclipse.linuxtools.internal.docker.core.DockerHostConfig;
@@ -37,6 +41,7 @@ import org.eclipse.linuxtools.internal.docker.ui.ConsoleOutputStream;
 import org.eclipse.linuxtools.internal.docker.ui.RunConsole;
 import org.eclipse.linuxtools.internal.docker.ui.views.DVMessages;
 import org.eclipse.swt.widgets.Display;
+import org.osgi.service.prefs.Preferences;
 
 public class ContainerLauncher {
 
@@ -58,6 +63,8 @@ public class ContainerLauncher {
 	 *            - the specified connection to use
 	 * @param image
 	 *            - the image to use
+	 * @param listener
+	 *            - optional listener of the run console
 	 * @param command
 	 *            - command to run
 	 * @param commandDir
@@ -194,9 +201,16 @@ public class ContainerLauncher {
 		// otherwise, open an error
 		int defaultIndex = -1;
 		String[] connectionNames = new String[connections.length];
+		// If we have saved the last connection used from a previous session,
+		// default to using that connection to start unless it no longer exists
+		final Preferences prefs = InstanceScope.INSTANCE
+				.getNode(Activator.PLUGIN_ID);
+		final String lastConnectionUsed = prefs
+				.get(IDockerConnectionPreferenceConstants.LAST_CONNECTION_IMAGE_VIEW,
+						"");
 		for (int i = 0; i < connections.length; ++i) {
 			connectionNames[i] = connections[i].getName();
-			if (connections[i].getUri().equals(connectionUri))
+			if (connectionNames[i].equals(lastConnectionUsed))
 				defaultIndex = i;
 		}
 
@@ -229,8 +243,10 @@ public class ContainerLauncher {
 			public void run() {
 				// create the container
 				try {
-					String containerId = ((DockerConnection) connection)
+					final String containerId = ((DockerConnection) connection)
 							.createContainer(config);
+					final IDockerContainer container = ((DockerConnection) connection)
+							.getContainer(containerId);
 					OutputStream stream = null;
 					RunConsole oldConsole = getConsole();
 					final RunConsole rc = RunConsole.findConsole(containerId,
@@ -297,14 +313,14 @@ public class ContainerLauncher {
 						// container (we need to use the logging id)
 						((DockerConnection) connection)
 								.stopLoggingThread(loggingId);
-						while (((DockerConnection) connection)
-								.loggingStatus(loggingId) == EnumDockerLoggingStatus.LOGGING_ACTIVE) {
+						while (((DockerConnection) connection).loggingStatus(
+								loggingId) == EnumDockerLoggingStatus.LOGGING_ACTIVE) {
 							Thread.sleep(1000);
 						}
 						// Look for any Display Log console that the user may
 						// have opened which would be
 						// separate and make sure it is removed as well
-						RunConsole rc2 = RunConsole.findConsole(containerId);
+						RunConsole rc2 = RunConsole.findConsole(container);
 						if (rc2 != null)
 							RunConsole.removeConsole(rc2);
 						((DockerConnection) connection)

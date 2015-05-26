@@ -138,7 +138,8 @@ public class DockerPreferencePage extends PreferencePage implements
 		container.setText("Docker deamon binding settings");
 		container.setToolTipText("Select the binding mode to use to connect to the Docker daemon");
 		GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL).span(1,  1).grab(true, false).applyTo(container);
-		GridLayoutFactory.fillDefaults().numColumns(COLUMNS).margins(0, 0).spacing(10, 2).applyTo(container);
+		GridLayoutFactory.fillDefaults().numColumns(COLUMNS).margins(0, 0)
+				.applyTo(container);
 		
 		unixSocketBtn = new Button(container, SWT.RADIO);
 		unixSocketBtn.setText("Unix socket");

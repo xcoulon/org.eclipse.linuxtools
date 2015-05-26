@@ -138,7 +138,7 @@ public class DockerExplorerView extends CommonNavigator implements
 		final Composite container = form.getBody();
 		GridLayoutFactory.fillDefaults().numColumns(1).margins(5, 5)
 				.applyTo(container);
-		this.search = new Text(container, SWT.SEARCH);
+		this.search = new Text(container, SWT.SEARCH | SWT.ICON_SEARCH);
 		GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL)
 				.grab(true, false).applyTo(search);
 		search.addModifyListener(onSearch());

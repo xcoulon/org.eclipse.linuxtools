@@ -55,15 +55,14 @@
        
    </extension>
    <extension
-         point="org.eclipse.help.contexts">
-      <contexts
-            file="contexts.xml">
-      </contexts>
-   </extension>
-   <extension
          point="org.eclipse.ui.navigator.viewer">
       <viewer
             viewerId="org.eclipse.linuxtools.docker.ui.dockerExplorerView">
+	      <popupMenu
+					allowsPlatformContributions="true"
+					id="org.eclipse.linuxtools.docker.ui.dockerExplorerView#PopupMenu">
+			<insertionPoint name="group.run" separator="true"/>
+			</popupMenu>
             <options>
 				<property
 					name="org.eclipse.ui.navigator.hideLinkWithEditorAction"
@@ -251,6 +250,13 @@
 		         class="org.eclipse.ui.handlers.RegistryToggleState:true"
 		         id="org.eclipse.ui.commands.toggleState">
 		   </state>
+		</command>
+		<command
+	        description="%command.runimage.description"
+	        id="org.eclipse.linuxtools.docker.ui.commands.runImage"
+	        name="%command.runimage.name">
+	        id="org.eclipse.linuxtools.docker.ui.commands.runImage"
+	        name="%command.runimage.name">
         </command>
 	</extension>
     <extension
@@ -494,6 +500,11 @@
               commandId="org.eclipse.linuxtools.docker.ui.commands.showAllImages"
               class="org.eclipse.linuxtools.internal.docker.ui.commands.ShowAllImagesCommandHandler">
      	</handler>
+		<handler
+              commandId="org.eclipse.linuxtools.docker.ui.commands.runImage"
+              class="org.eclipse.linuxtools.internal.docker.ui.commands.RunImageCommandHandler">
+     	</handler>
+     	
 	</extension>
 	<!-- property testers -->
 	<extension
@@ -781,7 +792,32 @@
 				</command>
 		</menuContribution>
 		
-		
+		<!-- Docker Explorer View: run image -->
+		<menuContribution
+			locationURI="popup:org.eclipse.linuxtools.docker.ui.dockerExplorerView#PopupMenu?after=group.run">
+	  		<command
+           commandId="org.eclipse.linuxtools.docker.ui.commands.runImage"
+           icon="icons/createcontainer.gif"
+           label="%command.runimage.label"
+           mnemonic="R"
+           style="push">
+	            <visibleWhen
+	               checkEnabled="false">
+	               <with
+	                   variable="selection">
+	               <count
+	                      value="1">
+	                </count>
+	                <iterate
+	                      ifEmpty="false"
+	                      operator="and">
+	                 <instanceof
+	                       value="org.eclipse.linuxtools.docker.core.IDockerImage" />
+	                </iterate>
+	               </with>
+	         </visibleWhen>
+	      </command>
+		</menuContribution>		
 	</extension>
 	
     <extension point="org.eclipse.ui.views.properties.tabbed.propertyContributor">
@@ -795,7 +831,6 @@
    </propertyCategory>
 		</propertyContributor>
 	</extension>
-	
 	
 	<extension point="org.eclipse.ui.views.properties.tabbed.propertySections">
 		<propertySections contributorId="org.eclipse.linuxtools.docker.ui.dockerExplorerView">

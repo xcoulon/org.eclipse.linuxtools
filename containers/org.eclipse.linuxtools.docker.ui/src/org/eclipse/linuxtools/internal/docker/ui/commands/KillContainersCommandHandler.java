@@ -34,7 +34,6 @@ public class KillContainersCommandHandler extends BaseContainersCommandHandler {
 	void executeInJob(final IDockerContainer container, final IDockerConnection connection) {
 		try {
 			connection.killContainer(container.id());
-			connection.getContainers(true);
 		} catch (DockerException | InterruptedException e) {
 			final String errorMessage = DVMessages.getFormattedString(CONTAINER_KILL_ERROR_MSG, container.id());
 			openError(errorMessage, e);

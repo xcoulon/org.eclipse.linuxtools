@@ -45,7 +45,7 @@ public class StartContainersCommandHandler extends BaseContainersCommandHandler 
 			} else {
 				((DockerConnection) connection).startContainer(container.id(), null);
 			}
-			((DockerConnection) connection).getContainers(true);
+			// ((DockerConnection) connection).getContainers(true);
 		} catch (DockerException | InterruptedException e) {
 			final String errorMessage = DVMessages.getFormattedString(CONTAINER_START_ERROR_MSG, container.id());
 			openError(errorMessage, e);

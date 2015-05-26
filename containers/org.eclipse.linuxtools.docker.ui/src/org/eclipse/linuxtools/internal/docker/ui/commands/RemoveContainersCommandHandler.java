@@ -44,11 +44,6 @@ public class RemoveContainersCommandHandler extends BaseContainersCommandHandler
 			final String errorMessage = DVMessages.getFormattedString(
 					CONTAINER_REMOVE_ERROR_MSG, container.id().substring(0, 8));
 			openError(errorMessage, e);
-		} finally {
-			// always get images as we sometimes get errors on intermediate
-			// images
-			// being removed but we will remove some top ones successfully
-			connection.getContainers(true);
 		}
 	}
 

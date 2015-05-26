@@ -22,8 +22,8 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.linuxtools.docker.core.DockerException;
 import org.eclipse.linuxtools.docker.core.IDockerConnection;
+import org.eclipse.linuxtools.docker.core.IDockerContainer;
 import org.eclipse.linuxtools.docker.core.IDockerContainerConfig;
-import org.eclipse.linuxtools.docker.core.IDockerContainerInfo;
 import org.eclipse.linuxtools.docker.core.IDockerHostConfig;
 import org.eclipse.linuxtools.docker.core.IDockerImage;
 import org.eclipse.linuxtools.internal.docker.core.DockerConnection;
@@ -89,15 +89,11 @@ public class CreateContainerCommandHandler extends AbstractHandler {
 					final String containerId = ((DockerConnection) connection)
 							.createContainer(config);
 					monitor.worked(1);
-					IDockerContainerInfo info = ((DockerConnection) connection)
-							.getContainerInfo(containerId);
-					String name = info.name();
-					if (name.startsWith("/")) //$NON-NLS-1$
-						name = name.replaceFirst("/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+					IDockerContainer container = ((DockerConnection) connection)
+							.getContainer(containerId);
 					monitor.worked(1);
 					OutputStream stream = null;
-					RunConsole rc = RunConsole.findConsole(containerId,
-							RunConsole.DEFAULT_ID, name);
+					RunConsole rc = RunConsole.findConsole(container);
 					rc.attachToConsole(connection);
 					monitor.worked(1);
 					if (rc != null) {

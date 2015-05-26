@@ -135,17 +135,17 @@ public class DockerContainerConfig implements IDockerContainerConfig {
 
 	@Override
 	public Boolean attachStdin() {
-		return attachStdin;
+		return (attachStdin != null) ? attachStdin : Boolean.FALSE;
 	}
 
 	@Override
 	public Boolean attachStdout() {
-		return attachStdout;
+		return (attachStdout != null) ? attachStdout : Boolean.FALSE;
 	}
 
 	@Override
 	public Boolean attachStderr() {
-		return attachStderr;
+		return (attachStderr != null) ? attachStderr : Boolean.FALSE;
 	}
 
 	@Override
@@ -160,17 +160,17 @@ public class DockerContainerConfig implements IDockerContainerConfig {
 
 	@Override
 	public Boolean tty() {
-		return tty;
+		return (tty != null) ? tty : Boolean.FALSE;
 	}
 
 	@Override
 	public Boolean openStdin() {
-		return openStdin;
+		return (openStdin != null) ? openStdin : Boolean.FALSE;
 	}
 
 	@Override
 	public Boolean stdinOnce() {
-		return stdinOnce;
+		return (stdinOnce != null) ? stdinOnce : Boolean.FALSE;
 	}
 
 	@Override
@@ -240,7 +240,9 @@ public class DockerContainerConfig implements IDockerContainerConfig {
 		private List<String> onBuild;
 
 		public Builder hostname(final String hostname) {
-			this.hostname = hostname;
+			if (hostname != null && !hostname.isEmpty()) {
+				this.hostname = hostname;
+			}
 			return this;
 		}
 
@@ -400,12 +402,20 @@ public class DockerContainerConfig implements IDockerContainerConfig {
 		}
 
 		public Builder cmd(final List<String> cmd) {
-			this.cmd = new ArrayList<>(cmd);
+			if (cmd != null && !cmd.isEmpty()) {
+				this.cmd = new ArrayList<String>(cmd);
+			}
 			return this;
 		}
 
 		public Builder cmd(final String... cmd) {
-			this.cmd = Arrays.asList(cmd);
+			return cmd(Arrays.asList(cmd));
+		}
+
+		public Builder cmd(final String cmd) {
+			if (cmd != null && !cmd.isEmpty()) {
+				return cmd(cmd.split(" "));
+			}
 			return this;
 		}
 
@@ -446,12 +456,20 @@ public class DockerContainerConfig implements IDockerContainerConfig {
 		}
 
 		public Builder entryPoint(final List<String> entrypoint) {
-			this.entrypoint = new ArrayList<>(entrypoint);
+			if (entrypoint != null && !entrypoint.isEmpty()) {
+				this.entrypoint = new ArrayList<String>(entrypoint);
+			}
 			return this;
 		}
 
 		public Builder entryPoint(final String... entrypoint) {
-			this.entrypoint = Arrays.asList(entrypoint);
+			return entryPoint(Arrays.asList(entrypoint));
+		}
+
+		public Builder entryPoint(final String entrypoint) {
+			if (entrypoint != null && !entrypoint.isEmpty()) {
+				return entryPoint(entrypoint.split(" "));
+			}
 			return this;
 		}
 
