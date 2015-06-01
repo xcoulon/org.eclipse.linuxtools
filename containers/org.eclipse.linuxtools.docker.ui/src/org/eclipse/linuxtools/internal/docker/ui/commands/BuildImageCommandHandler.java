@@ -31,8 +31,8 @@ import org.eclipse.ui.handlers.HandlerUtil;
 
 public class BuildImageCommandHandler extends AbstractHandler {
 
-	private final static String BUILD_IMAGE_JOB_TITLE = "ImageBuild.msg"; //$NON-NLS-1$
-	private static final String ERROR_BUILDING_IMAGE = "ImageBuildError.msg"; //$NON-NLS-1$
+	public static final String BUILD_IMAGE_JOB_TITLE = "ImageBuild.msg"; //$NON-NLS-1$
+	public static final String ERROR_BUILDING_IMAGE = "ImageBuildError.msg"; //$NON-NLS-1$
 	
 	private IDockerConnection connection;
 

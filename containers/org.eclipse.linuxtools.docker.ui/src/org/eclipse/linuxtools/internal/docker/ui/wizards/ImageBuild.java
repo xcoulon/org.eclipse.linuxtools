@@ -10,14 +10,12 @@
  *******************************************************************************/
 package org.eclipse.linuxtools.internal.docker.ui.wizards;
 
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.wizard.Wizard;
+import org.eclipse.linuxtools.internal.docker.ui.utils.ImageBuildUtils;
 
 public class ImageBuild extends Wizard {
 
@@ -53,37 +51,14 @@ public class ImageBuild extends Wizard {
 		return mainPage.isPageComplete();
 	}
 
-	private int numberOfLines() throws IOException {
-		String fileName = directory.append("Dockerfile").toString(); //$NON-NLS-1$
-		InputStream is = null;
-		int count = 0;
-		boolean empty = false;
-		try {
-			is = new BufferedInputStream(new FileInputStream(fileName));
-			byte[] c = new byte[1024];
-			int readChars = 0;
-			while ((readChars = is.read(c)) != -1) {
-				empty = false;
-				for (int i = 0; i < readChars; ++i) {
-					if (c[i] == '\n') {
-						++count;
-					}
-				}
-			}
-		} finally {
-			if (is != null)
-				is.close();
-		}
-		return (count == 0 && !empty) ? 1 : count;
-	}
-
 	@Override
 	public boolean performFinish() {
 		imageName = mainPage.getImageName();
 		directory = new Path(mainPage.getDirectory());
 
 		try {
-			lines = numberOfLines();
+			lines = ImageBuildUtils
+					.numberOfLines(directory.append("Dockerfile").toString());
 		} catch (IOException e) {
 			// do nothing
 		}

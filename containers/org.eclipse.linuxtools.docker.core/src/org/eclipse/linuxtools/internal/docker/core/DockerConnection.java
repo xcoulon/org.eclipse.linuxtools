@@ -30,6 +30,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.nio.file.FileSystems;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -56,6 +57,7 @@ import org.eclipse.linuxtools.docker.core.DockerContainerNotFoundException;
 import org.eclipse.linuxtools.docker.core.DockerException;
 import org.eclipse.linuxtools.docker.core.EnumDockerConnectionSettings;
 import org.eclipse.linuxtools.docker.core.EnumDockerLoggingStatus;
+import org.eclipse.linuxtools.docker.core.EnumImageBuildParameter;
 import org.eclipse.linuxtools.docker.core.IDockerConfParameter;
 import org.eclipse.linuxtools.docker.core.IDockerConnection;
 import org.eclipse.linuxtools.docker.core.IDockerConnectionInfo;
@@ -310,7 +312,7 @@ public class DockerConnection implements IDockerConnection {
 
 		/**
 		 * @return the name of the script to run, depending on the OS (Windows,
-		 *         MAc, *Nix)
+		 *         Mac, Linux/*nix)
 		 */
 		private String getConnectionSettingsDetectionScriptName() {
 			final String osName = System.getProperty("os.name"); //$NON-NLS-1$
@@ -1074,17 +1076,69 @@ public class DockerConnection implements IDockerConnection {
 	public String buildImage(final IPath path, final String name,
 			final IDockerProgressHandler handler) throws DockerException,
 			InterruptedException {
+		return buildImage(path, name, handler,
+				Arrays.asList(EnumImageBuildParameter.FORCE_RM));
+	}
+
+	@Override
+	public String buildImage(final IPath path, final String name,
+			final IDockerProgressHandler handler,
+			final List<EnumImageBuildParameter> imageBuildParameters)
+					throws DockerException, InterruptedException {
 		try {
-			DockerProgressHandler d = new DockerProgressHandler(handler);
-			java.nio.file.Path p = FileSystems.getDefault().getPath(
+			final DockerProgressHandler d = new DockerProgressHandler(handler);
+			final java.nio.file.Path p = FileSystems.getDefault()
+					.getPath(
 					path.makeAbsolute().toOSString());
-			return client.build(p, name, d, BuildParameter.FORCE_RM);
+			final BuildParameter[] buildParameters = getBuildParameter(
+					imageBuildParameters);
+			return client.build(p, name, d, buildParameters);
 		} catch (com.spotify.docker.client.DockerRequestException e) {
 			throw new DockerException(e.message());
 		} catch (com.spotify.docker.client.DockerException | IOException e) {
 			DockerException f = new DockerException(e);
 			throw f;
 		}
+	}
+
+	/**
+	 * Converts the given {@link List} of {@link EnumImageBuildParameter} into
+	 * an array of equivalent {@link BuildParameter}
+	 * 
+	 * @param imageBuildParameters
+	 *            the list of {@link EnumImageBuildParameter}
+	 * @return the equivalent array of {@link BuildParameter} or an empty array
+	 *         of the given list was <code>null</code> or empty.
+	 */
+	private BuildParameter[] getBuildParameter(
+			List<EnumImageBuildParameter> imageBuildParameters) {
+		if (imageBuildParameters == null) {
+			return new BuildParameter[0];
+		}
+		final BuildParameter[] buildParameters = new BuildParameter[imageBuildParameters
+				.size()];
+		for (int i = 0; i < imageBuildParameters.size(); i++) {
+			EnumImageBuildParameter parameter = imageBuildParameters.get(i);
+			switch (parameter) {
+			case FORCE_RM:
+				buildParameters[i] = BuildParameter.FORCE_RM;
+				break;
+			case NO_CACHE:
+				buildParameters[i] = BuildParameter.NO_CACHE;
+				break;
+			case NO_RM:
+				buildParameters[i] = BuildParameter.NO_RM;
+				break;
+			case QUIET:
+				buildParameters[i] = BuildParameter.QUIET;
+				break;
+			default:
+				Activator.log(new Status(IStatus.WARNING, Activator.PLUGIN_ID,
+						"Unknown build parameter: " + parameter.name()));
+				break;
+			}
+		}
+		return buildParameters;
 	}
 
 	public void save() {

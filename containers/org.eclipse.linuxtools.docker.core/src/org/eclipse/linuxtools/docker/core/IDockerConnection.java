@@ -168,6 +168,21 @@ public interface IDockerConnection {
 
 	void tagImage(String name, String newTag) throws DockerException, InterruptedException;
 
+	/**
+	 * Builds an {@link IDockerImage} with the given name from the selected
+	 * file.
+	 * 
+	 * @param path
+	 *            the path to the Docker file
+	 * @param name
+	 *            the image name
+	 * @param handler
+	 *            the progress handler
+	 * @return The id of the built image if successful, otherwise
+	 *         <code>null</code>.
+	 * @throws DockerException
+	 * @throws InterruptedException
+	 */
 	String buildImage(IPath path, String name, IDockerProgressHandler handler)
 			throws DockerException, InterruptedException;
 
@@ -176,6 +191,24 @@ public interface IDockerConnection {
 
 	public String createContainer(final IDockerContainerConfig config,
 			final String containerName)
+					throws DockerException, InterruptedException;
+	/**
+	 * Builds an {@link IDockerImage} with the given name from the selected file
+	 * using the given build parameters
+	 * 
+	 * @param path
+	 *            the path to the Docker file
+	 * @param name
+	 *            the image name
+	 * @param handler
+	 *            the progress handler
+	 * @return The id of the built image if successful, otherwise
+	 *         <code>null</code>.
+	 * @throws DockerException
+	 * @throws InterruptedException
+	 */
+	String buildImage(IPath path, String name, IDockerProgressHandler handler,
+			List<EnumImageBuildParameter> buildParameters)
 					throws DockerException, InterruptedException;
 
 	void stopContainer(String id) throws DockerException, InterruptedException;
