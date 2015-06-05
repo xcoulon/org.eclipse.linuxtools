@@ -89,13 +89,27 @@ public class ContainerLinkDialog extends Dialog {
 		return new Point(400, super.getInitialSize().y);
 	}
 
+	/**
+	 * Disable the 'OK' button by default
+	 */
+	@Override
+	protected Button createButton(Composite parent, int id, String label,
+			boolean defaultButton) {
+		final Button button = super.createButton(parent, id, label,
+				defaultButton);
+		if (id == IDialogConstants.OK_ID) {
+			button.setEnabled(false);
+		}
+		return button;
+	}
+
 	@Override
 	protected Control createDialogArea(final Composite parent) {
 		final int COLUMNS = 2;
 		final Composite container = new Composite(parent, SWT.NONE);
 		GridDataFactory.fillDefaults().align(SWT.FILL, SWT.FILL)
 				.span(COLUMNS, 1).grab(true, false).applyTo(container);
-		GridLayoutFactory.fillDefaults().numColumns(COLUMNS).margins(6, 6)
+		GridLayoutFactory.fillDefaults().numColumns(COLUMNS).margins(10, 10)
 				.applyTo(container);
 		final Label explanationLabel = new Label(container, SWT.NONE);
 		explanationLabel
@@ -175,17 +189,6 @@ public class ContainerLinkDialog extends Dialog {
 		};
 	}
 
-	@Override
-	protected Button createButton(Composite parent, int id, String label,
-			boolean defaultButton) {
-		final Button button = super.createButton(parent, id, label,
-				defaultButton);
-		if (id == IDialogConstants.OK_ID) {
-			button.setEnabled(false);
-		}
-		return button;
-	}
-
 	public String getContainerName() {
 		return model.getContainerName();
 	}
@@ -208,7 +211,7 @@ public class ContainerLinkDialog extends Dialog {
 			@Override
 			public IContentProposal[] getProposals(final String contents,
 					final int position) {
-				final List<IContentProposal> proposals = new ArrayList<IContentProposal>();
+				final List<IContentProposal> proposals = new ArrayList<>();
 				for (String containerName : containerSelectionCombo
 						.getItems()) {
 					if (containerName.contains(contents)) {
