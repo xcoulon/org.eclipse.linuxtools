@@ -26,10 +26,9 @@ public class DockerProgressHandler implements ProgressHandler {
 	}
 
 	@Override
-	public void progress(ProgressMessage message) throws DockerException {
-
+	public void progress(final ProgressMessage message) throws DockerException {
 		DockerProgressDetail detail = null;
-		ProgressDetail d = message.progressDetail();
+		final ProgressDetail d = message.progressDetail();
 		if (d != null) {
 			detail = new DockerProgressDetail(d.current(), d.start(), d.total());
 		}

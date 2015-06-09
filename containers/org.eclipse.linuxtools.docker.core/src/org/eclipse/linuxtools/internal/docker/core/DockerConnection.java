@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IStatus;
@@ -533,13 +534,18 @@ public class DockerConnection implements IDockerConnection {
 		synchronized (this) {
 			try {
 				if (this.client == null) {
+					final long DEFAULT_TIMEOUT = TimeUnit.SECONDS.toMillis(60);
 					if (this.socketPath != null) {
 						this.client = DefaultDockerClient.builder()
+								.readTimeoutMillis(
+										DEFAULT_TIMEOUT)
 								.uri(socketPath).build();
 					} else if (this.tcpHost != null) {
 						if (this.tcpCertPath != null) {
 							this.client = DefaultDockerClient
 									.builder()
+									.readTimeoutMillis(
+											DEFAULT_TIMEOUT)
 									.uri(URI.create(tcpHost))
 									.dockerCertificates(
 											new DockerCertificates(new File(
@@ -547,6 +553,8 @@ public class DockerConnection implements IDockerConnection {
 									.build();
 						} else {
 							this.client = DefaultDockerClient.builder()
+									.readTimeoutMillis(
+											DEFAULT_TIMEOUT)
 									.uri(URI.create(tcpHost)).build();
 						}
 					}
