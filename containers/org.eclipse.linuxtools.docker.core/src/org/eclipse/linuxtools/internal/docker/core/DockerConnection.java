@@ -39,7 +39,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IStatus;
@@ -534,7 +533,7 @@ public class DockerConnection implements IDockerConnection {
 		synchronized (this) {
 			try {
 				if (this.client == null) {
-					final long DEFAULT_TIMEOUT = TimeUnit.SECONDS.toMillis(60);
+					final long DEFAULT_TIMEOUT = DefaultDockerClient.NO_TIMEOUT; // TimeUnit.SECONDS.toMillis(60);
 					if (this.socketPath != null) {
 						this.client = DefaultDockerClient.builder()
 								.readTimeoutMillis(

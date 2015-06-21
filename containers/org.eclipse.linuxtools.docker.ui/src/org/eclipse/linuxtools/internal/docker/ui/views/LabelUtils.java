@@ -28,9 +28,9 @@ import org.eclipse.linuxtools.docker.core.IDockerPortMapping;
  */
 public class LabelUtils {
 	
-	public static final String CREATION_DATE_PATTERN = "yyyy-MM-dd";
+	public static final String CREATION_DATE_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
-	public static final String FINISHED_DATE_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.sssz";
+	public static final String FINISHED_DATE_PATTERN = "yyyy-MM-dd HH:mm:ss";
 	
 	/**
 	 * @param elements
