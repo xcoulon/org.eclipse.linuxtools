@@ -162,17 +162,6 @@ public interface IDockerConnection {
 	 */
 	public IDockerConnectionInfo getInfo() throws DockerException;
 
-	/**
-	 * Retrieves/refreshes the {@link IDockerImage} on the Docker daemon and
-	 * applies 'dangling' and 'intermediate' flags on each of them. Also
-	 * notifies {@link IDockerConnection} listeners with the list of Images.
-	 * 
-	 * @return the {@link List} of existing {@link IDockerImage}
-	 * @throws DockerException
-	 *             If listing images failed.
-	 */
-	public List<IDockerImage> listImages() throws DockerException;
-
 	void pullImage(String id, IDockerProgressHandler handler) throws DockerException, InterruptedException;
 
 	public List<IDockerImageSearchResult> searchImages(final String term) throws DockerException;

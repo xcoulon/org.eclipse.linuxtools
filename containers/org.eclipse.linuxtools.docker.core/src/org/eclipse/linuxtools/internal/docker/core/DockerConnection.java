@@ -733,23 +733,14 @@ public class DockerConnection implements IDockerConnection, Closeable {
 
 	@Override
 	public List<IDockerContainer> getContainers(final boolean force) {
-		List<IDockerContainer> latestContainers;
-		synchronized (containerLock) {
-			latestContainers = this.containers;
-		}
 		if (!isContainersLoaded() || force) {
 			try {
-				latestContainers = listContainers();
+				listContainers();
 			} catch (DockerException e) {
-				synchronized (containerLock) {
-					this.containers = Collections.emptyList();
-				}
 				Activator.log(e);
-			} finally {
-				this.containersLoaded = true;
 			}
 		}
-		return latestContainers;
+		return Collections.unmodifiableList(this.containers);
 	}
 
 	@Override
@@ -820,7 +811,7 @@ public class DockerConnection implements IDockerConnection, Closeable {
 							outputStream.write(bytes);
 					}
 				} while (follow && !stop);
-				listContainers();
+				getContainers(true);
 			} catch (com.spotify.docker.client.DockerRequestException e) {
 				Activator.logErrorMessage(e.message());
 				throw new InterruptedException();
@@ -838,50 +829,70 @@ public class DockerConnection implements IDockerConnection, Closeable {
 		}
 	}
 
+	/**
+	 * Refreshes the {@link List} of {@link IDockerContainer}
+	 * 
+	 * @return the updated list of containers or empty list if the connection
+	 *         was closed.
+	 * @throws DockerException
+	 *             in case of underlying exception when retrieving the list of
+	 *             containers from the Docker daemon.
+	 */
 	private List<IDockerContainer> listContainers() throws DockerException {
-		final List<IDockerContainer> dclist = new ArrayList<>();
-		synchronized (containerLock) {
-			List<Container> list = null;
-			try {
-				synchronized (clientLock) {
-					// Check that client is not null as this connection may have
-					// been closed but there is an async request to update the
-					// containers list left in the queue
-					if (client == null)
-						return dclist;
-					list = client.listContainers(
-							DockerClient.ListContainersParam.allContainers());
+		final List<IDockerContainer> updatedContainers = new ArrayList<>();
+		final List<Container> rawContainers = new ArrayList<>();
+		try {
+			synchronized (clientLock) {
+				// Check that client is not null as this connection may have
+				// been closed but there is an async request to update the
+				// containers list left in the queue
+				if (client == null) {
+					// in that case the list becomes empty, which is fine is
+					// there's no client.
+					return updatedContainers;
 				}
-			} catch (com.spotify.docker.client.DockerException
-					| InterruptedException e) {
-				throw new DockerException(
-						NLS.bind(
-						Messages.List_Docker_Containers_Failure,
-						this.getName()), e);
+				rawContainers.addAll(client.listContainers(
+						DockerClient.ListContainersParam.allContainers()));
 			}
-
 			// We have a list of containers. Now, we translate them to our own
 			// core format in case we decide to change the underlying engine
 			// in the future.
-			for (Container c : list) {
+			for (Container nativeContainer : rawContainers) {
 				// For containers that have exited, make sure we aren't tracking
 				// them with a logging thread.
-				if (c.status().startsWith(Messages.Exited_specifier)) {
-					if (loggingThreads.containsKey(c.id())) {
-						loggingThreads.get(c.id()).requestStop();
-						loggingThreads.remove(c.id());
+				if (nativeContainer.status()
+						.startsWith(Messages.Exited_specifier)) {
+					if (loggingThreads.containsKey(nativeContainer.id())) {
+						loggingThreads.get(nativeContainer.id()).requestStop();
+						loggingThreads.remove(nativeContainer.id());
 					}
 				}
-				dclist.add(new DockerContainer(this, c));
+				updatedContainers.add(new DockerContainer(this, nativeContainer));
 			}
-			containers = dclist;
+		} catch (com.spotify.docker.client.DockerException
+				| InterruptedException e) {
+			throw new DockerException(
+					NLS.bind(Messages.List_Docker_Containers_Failure,
+							this.getName()),
+					e);
+		} finally {
+			// assign the new list of containers in a locked block of code to
+			// prevent concurrent access, even if an exception was raised (in
+			// which case the list of containers becomes empty)
+			synchronized (containerLock) {
+				this.containers = updatedContainers;
+				this.containersLoaded = true;
+			}
 		}
+
 		// perform notification outside of containerLock so we don't have a View
 		// causing a deadlock
-		notifyContainerListeners(dclist);
-		return dclist;
+		// TODO: we should probably notify the listeners only if the containers
+		// list changed.
+		notifyContainerListeners(this.containers);
+		return containers;
 	}
-
+	
 	@Override
 	public IDockerContainer getContainer(String id) {
 		List<IDockerContainer> containers = getContainers();
@@ -953,23 +964,14 @@ public class DockerConnection implements IDockerConnection, Closeable {
 
 	@Override
 	public List<IDockerImage> getImages(final boolean force) {
-		List<IDockerImage> latestImages;
-		synchronized (imageLock) {
-			latestImages = this.images;
-		}
 		if (!isImagesLoaded() || force) {
 			try {
-				latestImages = listImages();
+				listImages();
 			} catch (DockerException e) {
-				synchronized (imageLock) {
-					this.images = Collections.emptyList();
-				}
 				Activator.log(e);
-			} finally {
-				this.imagesLoaded = true;
 			}
 		}
-		return latestImages;
+		return Collections.unmodifiableList(this.images);
 	}
 
 	@Override
@@ -977,27 +979,30 @@ public class DockerConnection implements IDockerConnection, Closeable {
 		return imagesLoaded;
 	}
 
-	@Override
-	public List<IDockerImage> listImages() throws DockerException {
-		final List<IDockerImage> dilist = new ArrayList<>();
-		synchronized (imageLock) {
-			List<Image> rawImages = null;
-			try {
-				synchronized (clientLock) {
-					// Check that client is not null as this connection may have
-					// been closed but there is an async request to update the
-					// images list left in the queue
-					if (client == null)
-						return dilist;
-					rawImages = client.listImages(
-							DockerClient.ListImagesParam.allImages());
+	/**
+	 * Retrieves/refreshes the {@link IDockerImage} on the Docker daemon and
+	 * applies 'dangling' and 'intermediate' flags on each of them. Also
+	 * notifies {@link IDockerConnection} listeners with the list of Images.
+	 * 
+	 * @return the {@link List} of existing {@link IDockerImage}
+	 * @throws DockerException
+	 *             If listing images failed.
+	 */
+	private List<IDockerImage> listImages() throws DockerException {
+		final List<IDockerImage> updatedImages = new ArrayList<>();
+		final List<Image> rawImages = new ArrayList<>();
+		try {
+			synchronized (clientLock) {
+				// Check that client is not null as this connection may have
+				// been closed but there is an async request to update the
+				// containers list left in the queue
+				if (client == null) {
+					// in that case the list becomes empty, which is fine is
+					// there's no client.
+					return updatedImages;
 				}
-			} catch (com.spotify.docker.client.DockerRequestException e) {
-				throw new DockerException(e.message());
-			} catch (com.spotify.docker.client.DockerException
-					| InterruptedException e) {
-				DockerException f = new DockerException(e);
-				throw f;
+				rawImages.addAll(client
+						.listImages(DockerClient.ListImagesParam.allImages()));
 			}
 			// We have a list of images. Now, we translate them to our own
 			// core format in case we decide to change the underlying engine
@@ -1019,19 +1024,33 @@ public class DockerConnection implements IDockerConnection, Closeable {
 				for(Entry<String, List<String>> entry : repoTags.entrySet()) {
 					final String repo = entry.getKey();
 					final List<String> tags = entry.getValue();
-					dilist.add(new DockerImage(this, rawImage
+					updatedImages.add(new DockerImage(this, rawImage
 							.repoTags(), repo, tags, rawImage.id(), rawImage.parentId(),
 							rawImage.created(), rawImage.size(), rawImage
 									.virtualSize(), intermediateImage,
 							danglingImage));
 				}
 			}
-			images = dilist;
+		} catch (com.spotify.docker.client.DockerException
+				| InterruptedException e) {
+			throw new DockerException(NLS.bind(
+					Messages.List_Docker_Images_Failure, this.getName()), e);
+		} finally {
+			// assign the new list of containers in a locked block of code to
+			// prevent concurrent access, even if an exception was raised (in
+			// which case the list of containers becomes empty)
+			synchronized (imageLock) {
+				this.images = updatedImages;
+				this.imagesLoaded = true;
+			}
 		}
-		// Perform notification outside of lock so that listener doesn't cause a
-		// deadlock to occur
-		notifyImageListeners(dilist);
-		return dilist;
+
+		// perform notification outside of imageLock so we don't have a View
+		// causing a deadlock
+		// TODO: we should probably notify the listeners only if the containers
+		// list changed.
+		notifyImageListeners(this.images);
+		return this.images;
 	}
 
 	@Override
@@ -1441,7 +1460,7 @@ public class DockerConnection implements IDockerConnection, Closeable {
 				}
 			}
 			// list of containers needs to be refreshed once the container started, to reflect it new state.
-			listContainers(); 
+			listContainers();
 		} catch (ContainerNotFoundException e) {
 			throw new DockerContainerNotFoundException(e);
 		} catch (com.spotify.docker.client.DockerRequestException e) {
