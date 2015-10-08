@@ -251,14 +251,21 @@ public class DockerExplorerView extends CommonNavigator implements
 	}
 
 	@Override
-	public void changeEvent(int type) {
+	@Deprecated
+	public void changeEvent(final int type) {
+		// method kept for backward compatibility
+	}
+
+	@Override
+	public void changeEvent(final IDockerConnection connection,
+			final int type) {
 		showConnectionsOrExplanations();
 		switch(type) {
 		case IDockerConnectionManagerListener.ADD_EVENT:
-			registerListeners();
+			registerListeners(connection);
 			break;
 		case IDockerConnectionManagerListener.REMOVE_EVENT:
-			unregisterListeners();
+			unregisterListeners(connection);
 			break;
 		}
 	}
@@ -266,34 +273,34 @@ public class DockerExplorerView extends CommonNavigator implements
 	private void registerListeners() {
 		for (IDockerConnection connection : DockerConnectionManager
 				.getInstance().getConnections()) {
-			if (!containersRefreshers.containsKey(connection)) {
-				final ContainersRefresher refresher = new ContainersRefresher();
-				connection.addContainerListener(refresher);
-				containersRefreshers.put(connection, refresher);
-			}
-			if (!imagesRefreshers.containsKey(connection)) {
-				final ImagesRefresher refresher = new ImagesRefresher();
-				connection.addImageListener(refresher);
-				imagesRefreshers.put(connection, refresher);
-			}
+			registerListeners(connection);
 		}
 	}
 
-	private void unregisterListeners() {
-		for (IDockerConnection connection : DockerConnectionManager
-				.getInstance().getConnections()) {
-			if (containersRefreshers.containsKey(connection)) {
-				final ContainersRefresher refresher = containersRefreshers
-						.get(connection);
-				connection.removeContainerListener(refresher);
-				containersRefreshers.remove(connection);
-			}
-			if (imagesRefreshers.containsKey(connection)) {
-				final ImagesRefresher refresher = imagesRefreshers
-						.get(connection);
-				connection.removeImageListener(refresher);
-				imagesRefreshers.remove(connection);
-			}
+	private void registerListeners(final IDockerConnection connection) {
+		if (!containersRefreshers.containsKey(connection)) {
+			final ContainersRefresher refresher = new ContainersRefresher();
+			connection.addContainerListener(refresher);
+			containersRefreshers.put(connection, refresher);
+		}
+		if (!imagesRefreshers.containsKey(connection)) {
+			final ImagesRefresher refresher = new ImagesRefresher();
+			connection.addImageListener(refresher);
+			imagesRefreshers.put(connection, refresher);
+		}
+	}
+
+	private void unregisterListeners(final IDockerConnection connection) {
+		if (containersRefreshers.containsKey(connection)) {
+			final ContainersRefresher refresher = containersRefreshers
+					.get(connection);
+			connection.removeContainerListener(refresher);
+			containersRefreshers.remove(connection);
+		}
+		if (imagesRefreshers.containsKey(connection)) {
+			final ImagesRefresher refresher = imagesRefreshers.get(connection);
+			connection.removeImageListener(refresher);
+			imagesRefreshers.remove(connection);
 		}
 	}
 
