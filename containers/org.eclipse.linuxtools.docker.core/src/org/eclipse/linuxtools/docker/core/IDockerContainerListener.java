@@ -16,7 +16,8 @@ public interface IDockerContainerListener {
 
 	/**
 	 * Called when the list of {@link IDockerContainer} for the given
-	 * {@link IDockerConnection} changed
+	 * {@link IDockerConnection} changed (including when it was loaded for the
+	 * first time)
 	 * 
 	 * @param connection
 	 *            - the Docker connection

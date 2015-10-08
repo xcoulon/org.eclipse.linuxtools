@@ -19,9 +19,9 @@ import org.eclipse.linuxtools.internal.docker.ui.testutils.MockDockerConnectionS
 import org.eclipse.linuxtools.internal.docker.ui.testutils.swt.CheckBoxAssertion;
 import org.eclipse.linuxtools.internal.docker.ui.testutils.swt.RadioAssertion;
 import org.eclipse.linuxtools.internal.docker.ui.testutils.swt.TextAssertion;
+import org.eclipse.swtbot.eclipse.finder.widgets.SWTBotView;
 import org.eclipse.swtbot.swt.finder.widgets.SWTBotToolbarButton;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -31,10 +31,18 @@ import org.junit.Test;
 public class NewDockerConnectionSWTBotTest extends BaseSWTBotTest {
 
 	private SWTBotToolbarButton addConnectionButton;
+	private SWTBotView dockerExplorerViewBot;
 
 	@Before
-	public void lookupWidgets() throws Exception {
-		this.addConnectionButton = getAddConnectionButton();
+	public void lookupDockerExplorerView() throws Exception {
+		dockerExplorerViewBot = bot.viewById("org.eclipse.linuxtools.docker.ui.dockerExplorerView");
+		dockerExplorerViewBot.show();
+		bot.views().stream()
+				.filter(v -> v.getReference().getId().equals("org.eclipse.linuxtools.docker.ui.dockerContainersView")
+						|| v.getReference().getId().equals("org.eclipse.linuxtools.docker.ui.dockerImagesView"))
+				.forEach(v -> v.close());
+		dockerExplorerViewBot.setFocus();
+		this.addConnectionButton = dockerExplorerViewBot.toolbarButton("&Add Connection");
 	}
 
 	@After
@@ -43,14 +51,6 @@ public class NewDockerConnectionSWTBotTest extends BaseSWTBotTest {
 			bot.button("Cancel").click();
 		}
 		DockerConnectionManager.getInstance().setConnectionSettingsFinder(new DefaultDockerConnectionSettingsFinder());
-	}
-
-	private static SWTBotToolbarButton getAddConnectionButton() throws Exception {
-		final SWTBotToolbarButton button = bot.toolbarButtonWithTooltip("&Add Connection");
-		if (button == null) {
-			Assert.fail("Failed to find the 'Add Connection' button");
-		}
-		return button;
 	}
 
 	@Test
