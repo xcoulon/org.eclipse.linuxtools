@@ -109,12 +109,4 @@ public class DockerPortMapping implements IDockerPortMapping {
 		return true;
 	}
 
-	@Override
-	public int compareTo(final IDockerPortMapping other) {
-		return other.getPublicPort() - this.publicPort;
-	}
-	
-	
-	
-	
 }

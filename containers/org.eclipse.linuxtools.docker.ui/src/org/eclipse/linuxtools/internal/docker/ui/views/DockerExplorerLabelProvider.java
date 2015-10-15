@@ -26,10 +26,10 @@ import org.eclipse.linuxtools.docker.core.EnumDockerStatus;
 import org.eclipse.linuxtools.docker.core.IDockerConnection;
 import org.eclipse.linuxtools.docker.core.IDockerContainer;
 import org.eclipse.linuxtools.docker.core.IDockerImage;
-import org.eclipse.linuxtools.docker.core.IDockerPortMapping;
 import org.eclipse.linuxtools.internal.docker.ui.SWTImagesFactory;
 import org.eclipse.linuxtools.internal.docker.ui.views.DockerExplorerContentProvider.DockerContainerLink;
 import org.eclipse.linuxtools.internal.docker.ui.views.DockerExplorerContentProvider.DockerContainerLinksCategory;
+import org.eclipse.linuxtools.internal.docker.ui.views.DockerExplorerContentProvider.DockerContainerPortMapping;
 import org.eclipse.linuxtools.internal.docker.ui.views.DockerExplorerContentProvider.DockerContainerPortMappingsCategory;
 import org.eclipse.linuxtools.internal.docker.ui.views.DockerExplorerContentProvider.DockerContainerVolume;
 import org.eclipse.linuxtools.internal.docker.ui.views.DockerExplorerContentProvider.DockerContainerVolumesCategory;
@@ -91,7 +91,7 @@ public class DockerExplorerLabelProvider implements IStyledLabelProvider, ILabel
 				|| element instanceof DockerContainerVolume) {
 			return SWTImagesFactory.DESC_CONTAINER_VOLUME.createImage();
 		} else if (element instanceof DockerContainerPortMappingsCategory
-				|| element instanceof IDockerPortMapping) {
+				|| element instanceof DockerContainerPortMapping) {
 			return SWTImagesFactory.DESC_CONTAINER_PORT.createImage();
 		} else if(element instanceof LoadingStub) {
 			return SWTImagesFactory.DESC_SYSTEM_PROCESS.createImage();
@@ -173,12 +173,12 @@ public class DockerExplorerLabelProvider implements IStyledLabelProvider, ILabel
 		} else if (element instanceof DockerContainerPortMappingsCategory) {
 			return new StyledString(DVMessages
 					.getString("DockerContainerPortMappingsCategory.label")); //$NON-NLS-1$
-		} else if (element instanceof IDockerPortMapping) {
-			final IDockerPortMapping mapping = (IDockerPortMapping) element;
-			final String hostMapping = mapping.getIp() + ":"
-								+ mapping.getPublicPort() + " -> ";
+		} else if (element instanceof DockerContainerPortMapping) {
+			final DockerContainerPortMapping mapping = (DockerContainerPortMapping) element;
+			final String hostMapping = mapping.getHostIpAddress() + ":"
+					+ mapping.getHostPort() + " -> ";
 			final String containerMapping = Integer
-					.toString(mapping.getPrivatePort());
+					.toString(mapping.getContainerPort());
 			final String mappingType = " (" + mapping.getType() + ")";
 			final StyledString styledString = new StyledString(
 					hostMapping + containerMapping + mappingType);
