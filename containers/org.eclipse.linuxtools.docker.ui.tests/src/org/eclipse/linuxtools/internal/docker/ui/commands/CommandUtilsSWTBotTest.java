@@ -66,7 +66,7 @@ public class CommandUtilsSWTBotTest extends BaseSWTBotTest {
 	}
 
 	@After
-	public void clearConnectionManager() throws InterruptedException {
+	public void clearConnectionManager() {
 		SWTUtils.syncExec(() -> {
 			Stream.of(DockerConnectionManager.getInstance().getConnections())
 					.forEach(c -> DockerConnectionManager.getInstance().removeConnection(c));
@@ -244,7 +244,7 @@ public class CommandUtilsSWTBotTest extends BaseSWTBotTest {
 	@Test
 	public void shouldRetrieveConnectionFromSelectedImagesCategory() throws InterruptedException {
 		// given
-		final DockerClient client = MockDockerClientFactory.images(MockDockerImageFactory.name("foo").build())
+		final DockerClient client = MockDockerClientFactory.image(MockDockerImageFactory.name("foo").build())
 				.build();
 		final DockerConnection dockerConnection = MockDockerConnectionFactory.from("Test", client).get();
 		configureConnectionManager(dockerConnection);
@@ -258,7 +258,7 @@ public class CommandUtilsSWTBotTest extends BaseSWTBotTest {
 	@Test
 	public void shouldRetrieveConnectionFromSelectedImage() throws InterruptedException {
 		// given
-		final DockerClient client = MockDockerClientFactory.images(MockDockerImageFactory.name("foo").build())
+		final DockerClient client = MockDockerClientFactory.image(MockDockerImageFactory.name("foo").build())
 				.build();
 		final DockerConnection dockerConnection = MockDockerConnectionFactory.from("Test", client).get();
 		configureConnectionManager(dockerConnection);

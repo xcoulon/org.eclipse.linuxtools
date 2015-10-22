@@ -38,9 +38,9 @@ public class DockerConnectionManagerTest {
 	}
 
 	@Test
-	public void shouldRegisterConnectionOnRefreshContainersManager() throws Exception {
+	public void shouldRegisterConnectionOnRefreshContainersManager() {
 		// given
-		final DockerClient client = MockDockerClientFactory.noImages().noContainers();
+		final DockerClient client = MockDockerClientFactory.noImages().build();
 		final DockerConnection dockerConnection = MockDockerConnectionFactory.from("Test", client).get();
 		dockerConnectionManager
 				.setConnectionStorageManager(MockDockerConnectionStorageManagerFactory.providing(dockerConnection));
@@ -52,9 +52,9 @@ public class DockerConnectionManagerTest {
 	}
 
 	@Test
-	public void shouldUnregisterConnectionOnRefreshContainersManager() throws Exception {
+	public void shouldUnregisterConnectionOnRefreshContainersManager() {
 		// given
-		final DockerClient client = MockDockerClientFactory.noImages().noContainers();
+		final DockerClient client = MockDockerClientFactory.noImages().build();
 		final DockerConnection dockerConnection = MockDockerConnectionFactory.from("Test", client).get();
 		dockerConnectionManager
 				.setConnectionStorageManager(MockDockerConnectionStorageManagerFactory.providing(dockerConnection));

@@ -56,6 +56,15 @@ public class DataVolumeModel extends BaseDatabindingModel
 		this.mountType = MountType.NONE;
 	}
 
+	public DataVolumeModel(final String containerPath, final String hostPath,
+			final boolean readOnly) {
+		this.containerPath = containerPath;
+		this.mountType = MountType.HOST_FILE_SYSTEM;
+		this.hostPathMount = hostPath;
+		this.mount = this.hostPathMount;
+		this.readOnly = readOnly;
+	}
+
 	public DataVolumeModel(final DataVolumeModel selectedDataVolume) {
 		this.containerPath = selectedDataVolume.getContainerPath();
 		this.mountType = selectedDataVolume.getMountType();

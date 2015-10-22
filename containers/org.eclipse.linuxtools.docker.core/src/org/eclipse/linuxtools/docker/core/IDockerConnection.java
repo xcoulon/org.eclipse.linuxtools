@@ -233,7 +233,7 @@ public interface IDockerConnection {
 	void commitContainer(String id, String repo, String tag, String comment,
 			String author) throws DockerException;
 
-	void stopLoggingThread(String id);
+	void stopLoggingThread(String id) throws InterruptedException;
 
 	void logContainer(String id, OutputStream stream)
 			throws DockerException, InterruptedException;

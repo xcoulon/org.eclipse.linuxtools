@@ -233,9 +233,38 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 		this.exposedPorts.remove(port);
 	}
 
-	public void setExposedPorts(final WritableList ports) {
+	public void setExposedPorts(final List<String> exposedPortInfos) {
+		final WritableList availablePorts = new WritableList();
+		if (exposedPortInfos != null) {
+			for (String exposedPortInfo : exposedPortInfos) {
+				final String privatePort = exposedPortInfo.substring(0,
+						exposedPortInfo.indexOf('/'));
+				// exposed ports without host IP/port info
+				final int firstColumnSeparator = exposedPortInfo.indexOf(':');// $NON-NLS-1$
+				if (firstColumnSeparator == -1) {
+					final String type = exposedPortInfo
+							.substring(exposedPortInfo.indexOf('/')); // $NON-NLS-1$
+					final ExposedPortModel exposedPort = new ExposedPortModel(
+							privatePort, type, "", privatePort); // $NON-NLS-1$
+					availablePorts.add(exposedPort); // $NON-NLS-1$
+				} else {
+					final int secondColumnSeparator = exposedPortInfo
+							.indexOf(':', firstColumnSeparator + 1);
+					final String type = exposedPortInfo.substring(
+							exposedPortInfo.indexOf('/'), // $NON-NLS-1$
+							firstColumnSeparator); // $NON-NLS-1$
+					final String hostIP = exposedPortInfo.substring(
+							firstColumnSeparator + 1, secondColumnSeparator);
+					final String hostPort = exposedPortInfo
+							.substring(secondColumnSeparator + 1);
+					final ExposedPortModel exposedPort = new ExposedPortModel(
+							privatePort, type, hostIP, hostPort); // $NON-NLS-1$
+					availablePorts.add(exposedPort); // $NON-NLS-1$
+				}
+			}
+		}
 		this.exposedPorts.clear();
-		this.exposedPorts.addAll(ports);
+		this.exposedPorts.addAll(availablePorts);
 	}
 
 	public Set<ExposedPortModel> getSelectedPorts() {
@@ -267,6 +296,22 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 
 	public void setLinks(final WritableList links) {
 		firePropertyChange(LINKS, this.links, this.links = links);
+	}
+
+	/**
+	 * Set the container links
+	 * 
+	 * @param links
+	 *            in the following format:
+	 *            <code>&lt;containerName&gt;:&lt;containerAlias&gt;</code>
+	 */
+	public void setLinks(final List<String> links) {
+		for (String link : links) {
+			final String[] items = link.split(":");
+			if (items.length == 2) {
+				addLink(items[0], items[1]);
+			}
+		}
 	}
 
 	public static String getImageName(final String repo, final String tag) {

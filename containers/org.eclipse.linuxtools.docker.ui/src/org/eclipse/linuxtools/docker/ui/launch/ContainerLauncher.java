@@ -23,7 +23,6 @@ import java.util.Set;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.linuxtools.docker.core.DockerConnectionManager;
 import org.eclipse.linuxtools.docker.core.DockerException;
-import org.eclipse.linuxtools.docker.core.EnumDockerLoggingStatus;
 import org.eclipse.linuxtools.docker.core.IDockerConnection;
 import org.eclipse.linuxtools.docker.core.IDockerContainerExit;
 import org.eclipse.linuxtools.docker.core.IDockerContainerInfo;
@@ -298,10 +297,6 @@ public class ContainerLauncher {
 						// container (we need to use the logging id)
 						((DockerConnection) connection)
 								.stopLoggingThread(loggingId);
-						while (((DockerConnection) connection)
-								.loggingStatus(loggingId) == EnumDockerLoggingStatus.LOGGING_ACTIVE) {
-							Thread.sleep(1000);
-						}
 						// Look for any Display Log console that the user may
 						// have opened which would be
 						// separate and make sure it is removed as well
