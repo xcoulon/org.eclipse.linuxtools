@@ -12,6 +12,7 @@
 package org.eclipse.linuxtools.internal.docker.ui.wizards;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -233,10 +234,12 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 		this.exposedPorts.remove(port);
 	}
 
-	public void setExposedPorts(final WritableList ports) {
+	public void setExposedPorts(final List<ExposedPortModel> exposedPorts) {
 		this.exposedPorts.clear();
-		this.exposedPorts.addAll(ports);
+		this.exposedPorts.addAll(exposedPorts);
+		// FIXME: also add all given exposedPorts to selectedExposedPorts ?
 	}
+
 
 	public Set<ExposedPortModel> getSelectedPorts() {
 		return selectedPorts;
@@ -267,6 +270,22 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 
 	public void setLinks(final WritableList links) {
 		firePropertyChange(LINKS, this.links, this.links = links);
+	}
+
+	/**
+	 * Set the container links
+	 * 
+	 * @param links
+	 *            in the following format:
+	 *            <code>&lt;containerName&gt;:&lt;containerAlias&gt;</code>
+	 */
+	public void setLinks(final List<String> links) {
+		for (String link : links) {
+			final String[] items = link.split(":");
+			if (items.length == 2) {
+				addLink(items[0], items[1]);
+			}
+		}
 	}
 
 	public static String getImageName(final String repo, final String tag) {
@@ -324,6 +343,63 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 		private String hostAddress;
 
 		private String hostPort;
+
+		/**
+		 * Parses and converts the {@link List} of the given {@link String}
+		 * values into a {@link List} of {@link ExposedPortModel}
+		 * 
+		 * @param exposedPortInfos
+		 *            the input values
+		 * @return the corresponding {@link ExposedPortModel}s
+		 */
+		public static List<ExposedPortModel> fromStrings(
+				final Collection<String> exposedPortInfos) {
+			final List<ExposedPortModel> exposedPorts = new ArrayList<>();
+			for (String exposedPortInfo : exposedPortInfos) {
+				final ExposedPortModel exposedPort = ExposedPortModel
+						.fromString(exposedPortInfo);
+				if (exposedPort != null) {
+					exposedPorts.add(exposedPort);
+				}
+			}
+			return exposedPorts;
+		}
+
+		/**
+		 * Parse the given value and returns an instance of
+		 * {@link ExposedPortModel}.
+		 * 
+		 * @param exposedPortInfo
+		 *            the value to parse
+		 * @return the corresponding {@link ExposedPortModel}
+		 */
+		public static ExposedPortModel fromString(
+				final String exposedPortInfo) {
+			final String privatePort = exposedPortInfo.substring(0,
+					exposedPortInfo.indexOf('/'));
+			// exposed ports without host IP/port info
+			final int firstColumnSeparator = exposedPortInfo.indexOf(':');// $NON-NLS-1$
+			if (firstColumnSeparator == -1) {
+				final String type = exposedPortInfo
+						.substring(exposedPortInfo.indexOf('/')); // $NON-NLS-1$
+				final ExposedPortModel exposedPort = new ExposedPortModel(
+						privatePort, type, "", privatePort); // $NON-NLS-1$
+				return exposedPort; // $NON-NLS-1$
+			} else {
+				final int secondColumnSeparator = exposedPortInfo.indexOf(':',
+						firstColumnSeparator + 1);
+				final String type = exposedPortInfo.substring(
+						exposedPortInfo.indexOf('/'), // $NON-NLS-1$
+						firstColumnSeparator); // $NON-NLS-1$
+				final String hostIP = exposedPortInfo.substring(
+						firstColumnSeparator + 1, secondColumnSeparator);
+				final String hostPort = exposedPortInfo
+						.substring(secondColumnSeparator + 1);
+				final ExposedPortModel exposedPort = new ExposedPortModel(
+						privatePort, type, hostIP, hostPort); // $NON-NLS-1$
+				return exposedPort; // $NON-NLS-1$
+			}
+		}
 
 		/**
 		 * Full constructor

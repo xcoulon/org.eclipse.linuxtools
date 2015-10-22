@@ -25,7 +25,6 @@ public class Messages extends NLS {
 	public static String Paused_specifier;
 	public static String Removal_In_Progress_specifier;
 	public static String Missing_Default_Settings;
-	public static String Missing_Settings;
 	public static String Retrieve_Default_Settings_Failure;
 	public static String Open_Connection_Failure;
 	public static String Docker_Daemon_Ping_Failure;

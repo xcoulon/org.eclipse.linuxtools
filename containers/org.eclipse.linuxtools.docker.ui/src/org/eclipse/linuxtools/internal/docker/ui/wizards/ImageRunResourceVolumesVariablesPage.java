@@ -10,8 +10,19 @@
  *******************************************************************************/
 package org.eclipse.linuxtools.internal.docker.ui.wizards;
 
+import static org.eclipse.linuxtools.internal.docker.ui.launch.IRunDockerImageLaunchConfigurationConstants.CONTAINER_VOLUMES;
+import static org.eclipse.linuxtools.internal.docker.ui.launch.IRunDockerImageLaunchConfigurationConstants.ENV_VARIABLES;
+import static org.eclipse.linuxtools.internal.docker.ui.launch.IRunDockerImageLaunchConfigurationConstants.HOST_VOLUMES;
+
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.core.databinding.DataBindingContext;
 import org.eclipse.core.databinding.beans.BeanProperties;
@@ -19,6 +30,8 @@ import org.eclipse.core.databinding.beans.IBeanValueProperty;
 import org.eclipse.core.databinding.observable.list.IObservableList;
 import org.eclipse.core.databinding.observable.map.IObservableMap;
 import org.eclipse.core.databinding.property.Properties;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.jface.databinding.swt.WidgetProperties;
 import org.eclipse.jface.databinding.viewers.ObservableListContentProvider;
 import org.eclipse.jface.databinding.viewers.ObservableMapLabelProvider;
@@ -37,7 +50,11 @@ import org.eclipse.jface.viewers.TableViewerColumn;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.linuxtools.docker.core.DockerException;
 import org.eclipse.linuxtools.docker.core.IDockerConnection;
+import org.eclipse.linuxtools.docker.core.IDockerImage;
+import org.eclipse.linuxtools.docker.core.IDockerImageInfo;
+import org.eclipse.linuxtools.docker.ui.Activator;
 import org.eclipse.linuxtools.internal.docker.ui.SWTImagesFactory;
+import org.eclipse.linuxtools.internal.docker.ui.jobs.FindImageInfoRunnable;
 import org.eclipse.linuxtools.internal.docker.ui.wizards.ImageRunResourceVolumesVariablesModel.MountType;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -67,7 +84,18 @@ public class ImageRunResourceVolumesVariablesPage extends WizardPage {
 
 	private final DataBindingContext dbc = new DataBindingContext();
 	private final ImageRunResourceVolumesVariablesModel model;
+	private final ILaunchConfiguration lastLaunchConfiguration;
 
+	/**
+	 * Default constructor.
+	 * 
+	 * @param selectedImage
+	 *            the {@link IDockerImage} to run
+	 * @throws DockerException
+	 *             if obtaining info from the given {@link IDockerConnection}
+	 *             failed
+	 * 
+	 */
 	public ImageRunResourceVolumesVariablesPage(
 			final IDockerConnection connection) throws DockerException {
 		super("ImageSelectionPage", //$NON-NLS-1$
@@ -75,6 +103,35 @@ public class ImageRunResourceVolumesVariablesPage extends WizardPage {
 				SWTImagesFactory.DESC_BANNER_REPOSITORY);
 		setPageComplete(true);
 		this.model = new ImageRunResourceVolumesVariablesModel(connection);
+		this.lastLaunchConfiguration = null;
+	}
+
+	/**
+	 * Default constructor.
+	 * 
+	 * @param selectedImage
+	 *            the {@link IDockerImage} to run
+	 * @param lastLaunchConfiguration
+	 *            the last {@link ILaunchConfiguration} used to run this
+	 *            {@link IDockerImage} or <code>null</code> if none exists.
+	 * @throws DockerException
+	 *             if obtaining info from the given {@link IDockerConnection}
+	 *             failed
+	 * @throws CoreException
+	 *             if reading attributes from {@link ILaunchConfiguration}
+	 *             failed
+	 * 
+	 */
+	public ImageRunResourceVolumesVariablesPage(final IDockerImage image,
+			final ILaunchConfiguration lastLaunchConfiguration)
+					throws DockerException {
+		super("ImageSelectionPage", //$NON-NLS-1$
+				WizardMessages.getString("ImageRunResourceVolVarPage.title"), //$NON-NLS-1$
+				SWTImagesFactory.DESC_BANNER_REPOSITORY);
+		setPageComplete(true);
+		this.model = new ImageRunResourceVolumesVariablesModel(
+image);
+		this.lastLaunchConfiguration = lastLaunchConfiguration;
 	}
 
 	public ImageRunResourceVolumesVariablesModel getModel() {
@@ -93,6 +150,7 @@ public class ImageRunResourceVolumesVariablesPage extends WizardPage {
 		createEnvironmentVariablesContainer(container);
 		createSectionSeparator(container, true);
 		createResourceSettingsContainer(container);
+		setDefaultValues();
 		setControl(container);
 	}
 
@@ -301,6 +359,69 @@ public class ImageRunResourceVolumesVariablesPage extends WizardPage {
 		dataVolumesTableViewer.addSelectionChangedListener(
 				onSelectionChanged(editButton, removeButton));
 
+	}
+
+	private void setDefaultValues() {
+		try {
+			// skip if a previous launch configuration was provided
+			final IDockerImage selectedImage = model.getSelectedImage();
+			if (selectedImage == null) {
+				return;
+			}
+			final IDockerImageInfo selectedImageInfo = findImageInfo(
+					selectedImage);
+			// using a map filled with entries (key==value) from default volumes
+			// that can be overridden by values from last launch config
+			final Map<String, DataVolumeModel> volumes = new HashMap<>();
+			final Set<DataVolumeModel> selectedVolumes = new HashSet<>();
+			if (selectedImageInfo != null) {
+				for (String volume : selectedImageInfo.config().volumes()) {
+					volumes.put(volume, new DataVolumeModel(volume));
+				}
+			}
+			if (lastLaunchConfiguration != null) {
+				// volumes:
+				// TODO: parse container volumes
+				final List<String> containerVolumes = lastLaunchConfiguration
+						.getAttribute(CONTAINER_VOLUMES,
+								Collections.<String> emptyList());
+
+				final List<String> hostVolumes = lastLaunchConfiguration
+						.getAttribute(HOST_VOLUMES,
+								Collections.<String> emptyList());
+								// model.setDataVolumes(bindings);
+								// model.setSelectedDataVolumes(bindings);
+				// TODO: convert host_path back to WinOS32 if necessary
+				// host volume pattern: <host_path>:<container_path>:Z<,ro>
+				for (String hostVolume : hostVolumes) {
+					final DataVolumeModel volume = DataVolumeModel
+							.hostVolumeFromString(hostVolume);
+					if (volume != null) {
+						volumes.put(volume.getContainerPath(), volume);
+						selectedVolumes.add(volume);
+					}
+				}
+				// environment variables
+				model.setEnvironmentVariables(
+						lastLaunchConfiguration.getAttribute(ENV_VARIABLES,
+								Collections.<String> emptyList()));
+			}
+			model.setDataVolumes(volumes.values());
+			model.setSelectedDataVolumes(selectedVolumes);
+		} catch (CoreException | InvocationTargetException
+				| InterruptedException e) {
+			Activator.log(e);
+		}
+	}
+
+	private IDockerImageInfo findImageInfo(final IDockerImage selectedImage)
+			throws InvocationTargetException, InterruptedException {
+		final FindImageInfoRunnable findImageInfoRunnable = new FindImageInfoRunnable(
+				selectedImage);
+		getContainer().run(true, true, findImageInfoRunnable);
+		final IDockerImageInfo selectedImageInfo = findImageInfoRunnable
+				.getResult();
+		return selectedImageInfo;
 	}
 
 	/**

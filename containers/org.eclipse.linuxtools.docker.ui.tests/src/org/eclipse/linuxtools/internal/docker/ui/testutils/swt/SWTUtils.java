@@ -13,7 +13,6 @@ import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swtbot.eclipse.finder.widgets.SWTBotView;
 import org.eclipse.swtbot.swt.finder.widgets.SWTBotTree;
 import org.eclipse.swtbot.swt.finder.widgets.SWTBotTreeItem;
-
 import org.junit.ComparisonFailure;
 
 public class SWTUtils {
@@ -108,15 +107,24 @@ public class SWTUtils {
 				}
 			}
 		});
-		Thread.sleep(TimeUnit.SECONDS.toMillis(1));
-		while (!Job.getJobManager().isIdle()) {
-			Thread.sleep(TimeUnit.SECONDS.toMillis(1));
-		}
+		waitForJobsToComplete();
 		if (!failure.isEmpty()) {
 			throw failure.poll();
 		}
 		if (!swtException.isEmpty()) {
 			throw swtException.poll();
+		}
+	}
+
+	/**
+	 * Waits for all {@link Job} to complete. 
+	 * 
+	 * @throws InterruptedException
+	 */
+	public static void waitForJobsToComplete() throws InterruptedException {
+		Thread.sleep(TimeUnit.SECONDS.toMillis(1));
+		while (!Job.getJobManager().isIdle()) {
+			Thread.sleep(TimeUnit.SECONDS.toMillis(1));
 		}
 	}
 

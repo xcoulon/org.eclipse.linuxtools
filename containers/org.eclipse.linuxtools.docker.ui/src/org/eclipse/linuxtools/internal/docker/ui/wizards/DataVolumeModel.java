@@ -12,6 +12,9 @@ package org.eclipse.linuxtools.internal.docker.ui.wizards;
 
 import java.util.UUID;
 
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.linuxtools.docker.ui.Activator;
 import org.eclipse.linuxtools.internal.docker.ui.databinding.BaseDatabindingModel;
 import org.eclipse.linuxtools.internal.docker.ui.wizards.ImageRunResourceVolumesVariablesModel.MountType;
 
@@ -48,12 +51,46 @@ public class DataVolumeModel extends BaseDatabindingModel
 
 	private boolean readOnly = false;
 
+	/**
+	 * Parses the given value and returns an instance of {@link DataVolumeModel}
+	 * .
+	 * 
+	 * @param hostVolume
+	 *            the value to parse
+	 * @return the {@link DataVolumeModel} or <code>null</code> if parsing
+	 *         failed.
+	 */
+	public static DataVolumeModel hostVolumeFromString(
+			final String hostVolume) {
+		final String[] items = hostVolume.split(":");
+		if (items.length == 3) {
+			final String hostPath = items[0];
+			final String containerPath = items[1];
+			final boolean readOnly = items[2].indexOf("ro") != -1;
+			return new DataVolumeModel(containerPath, hostPath, readOnly);
+		}
+		Activator.log(new Status(IStatus.WARNING, Activator.PLUGIN_ID,
+				WizardMessages.getFormattedString(
+						"DataVolumeModel.unableToParseHostVolume", //$NON-NLS-1$
+						hostVolume)));
+		return null;
+	}
+
 	public DataVolumeModel() {
 	}
 
 	public DataVolumeModel(final String containerPath) {
 		this.containerPath = containerPath;
 		this.mountType = MountType.NONE;
+	}
+
+	public DataVolumeModel(final String containerPath, final String hostPath,
+			final boolean readOnly) {
+		this.containerPath = containerPath;
+		this.mountType = MountType.HOST_FILE_SYSTEM;
+		this.hostPathMount = hostPath;
+		this.mount = this.hostPathMount;
+		this.readOnly = readOnly;
 	}
 
 	public DataVolumeModel(final DataVolumeModel selectedDataVolume) {

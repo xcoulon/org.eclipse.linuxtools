@@ -125,7 +125,7 @@ public class DockerContainer implements IDockerContainer {
 
 	@Override
 	public IDockerContainerInfo info(final boolean force) {
-		if (force || isInfoLoaded()) {
+		if (force || !isInfoLoaded()) {
 			this.containerInfo = this.parent.getContainerInfo(id);
 		}
 		return this.containerInfo;

@@ -18,6 +18,14 @@ import org.eclipse.debug.core.ILaunchConfiguration;
  */
 public interface IRunDockerImageLaunchConfigurationConstants {
 
+	/**
+	 * the launch id
+	 */
+	public final static String CONFIG_TYPE_ID = "org.eclipse.linuxtools.docker.ui.runDockerImageLaunchConfigurationType"; //$NON-NLS-1$
+
+	/** The date when the launch configuration was <strong>created</strong>. */
+	public static final String CREATION_DATE = "creationDate"; //$NON-NLS-1$
+
 	public static final String IMAGE_NAME = "imageName"; //$NON-NLS-1$
 
 	public static final String CONTAINER_NAME = "containerName"; //$NON-NLS-1$
@@ -28,7 +36,7 @@ public interface IRunDockerImageLaunchConfigurationConstants {
 
 	public static final String PUBLISH_ALL_PORTS = "publishAllPorts"; //$NON-NLS-1$
 
-	public static final String PUBLISH_PORTS = "publishPorts"; //$NON-NLS-1$
+	public static final String PUBLISHED_PORTS = "publishedPorts"; //$NON-NLS-1$
 
 	public static final String LINKS = "links"; //$NON-NLS-1$
 
@@ -38,7 +46,9 @@ public interface IRunDockerImageLaunchConfigurationConstants {
 
 	public static final String AUTO_REMOVE = "autoRemove"; //$NON-NLS-1$
 
-	public static final String DATA_VOLUME = "volumes"; //$NON-NLS-1$
+	public static final String HOST_VOLUMES = "hostVolumes"; //$NON-NLS-1$
+
+	public static final String CONTAINER_VOLUMES = "containerVolumes"; //$NON-NLS-1$
 
 	public static final String ENV_VARIABLES = "envVariables"; //$NON-NLS-1$
 
