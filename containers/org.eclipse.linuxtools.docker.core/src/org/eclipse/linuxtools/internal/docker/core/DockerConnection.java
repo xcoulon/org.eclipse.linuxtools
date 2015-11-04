@@ -62,6 +62,8 @@ import org.eclipse.linuxtools.docker.core.IDockerProgressHandler;
 import org.eclipse.linuxtools.docker.core.ILogger;
 import org.eclipse.linuxtools.docker.core.Messages;
 import org.eclipse.osgi.util.NLS;
+import org.eclipse.tm.terminal.view.core.interfaces.constants.ITerminalsConnectorConstants;
+import org.eclipse.tm.terminal.view.ui.streams.StreamsLauncherDelegate;
 
 import com.spotify.docker.client.ContainerNotFoundException;
 import com.spotify.docker.client.DockerCertificateException;
@@ -168,6 +170,8 @@ public class DockerConnection implements IDockerConnection, Closeable {
 
 	ListenerList containerListeners;
 	ListenerList imageListeners;
+
+	private List<LogStream> streams = new ArrayList<>();
 
 	/**
 	 * Constructor for a unix socket based connection
@@ -1292,7 +1296,7 @@ public class DockerConnection implements IDockerConnection, Closeable {
 		}
 	}
 
-	public WritableByteChannel attachCommand(final String id,
+	public void attachCommand(final String id,
 			final InputStream in, final OutputStream out)
 					throws DockerException {
 
@@ -1302,7 +1306,28 @@ public class DockerConnection implements IDockerConnection, Closeable {
 					AttachParameter.STDIN, AttachParameter.STDOUT,
 					AttachParameter.STDERR, AttachParameter.STREAM,
 					AttachParameter.LOGS);
-			final boolean isTtyEnabled = getContainerInfo(id).config().tty();
+			// TODO: The JVM GC is trying to destroy our LogStream (WHY!)
+			streams.add(pty_stream);
+			final IDockerContainerInfo info = getContainerInfo(id);
+			final boolean isTtyEnabled = info.config().tty();
+			final boolean isOpenStdin = info.config().openStdin();
+
+			if (isTtyEnabled) {
+				OutputStream tout = myNewOutputStream(HttpHijackWorkaround.getOutputStream(pty_stream, getUri()));
+				InputStream tin = HttpHijackWorkaround.getInputStream(pty_stream);
+				// org.eclipse.tm.terminal.connector.ssh.controls.SshWizardConfigurationPanel
+				Map<String, Object> properties = new HashMap<>();
+				properties.put("delegateId", "org.eclipse.tm.terminal.connector.streams.launcher.streams");
+				properties.put("tm.terminal.connector.id", "org.eclipse.tm.terminal.connector.streams.StreamsConnector");
+				properties.put(ITerminalsConnectorConstants.PROP_TITLE, info.name());
+				properties.put(ITerminalsConnectorConstants.PROP_LOCAL_ECHO, false);
+				properties.put(ITerminalsConnectorConstants.PROP_FORCE_NEW, true);
+//				properties.put(ITerminalsConnectorConstants.PROP_LINE_SEPARATOR, ILineSeparatorConstants.LINE_SEPARATOR_CRLF);
+				properties.put(ITerminalsConnectorConstants.PROP_STREAMS_STDIN, tout);
+				properties.put(ITerminalsConnectorConstants.PROP_STREAMS_STDOUT, tin);
+				StreamsLauncherDelegate delegate = new StreamsLauncherDelegate();
+				delegate.execute(properties, null);
+			}
 
 			// Data from the given input stream
 			// Written to container's STDIN
@@ -1329,145 +1354,12 @@ public class DockerConnection implements IDockerConnection, Closeable {
 				}
 			});
 
-			t_in.start();
-			// Incoming data from container's STDOUT
-			// Written to the given output stream
-			Thread t_out = new Thread(new Runnable() {
-				@Override
-				public void run() {
-					try {
-						InputStream pty_in = HttpHijackWorkaround
-								.getInputStream(pty_stream);
-						while (getContainerInfo(id).state().running()) {
-							byte[] buff = new byte[1024];
-							int n = pty_in.read(buff);
-							if (n > 0) {
-								/*
-								 * The container's STDOUT contains initial input
-								 * we sent to its STDIN and the result. eg. >
-								 * echo once < echo once \n $ once
-								 * 
-								 * Try to remove this unwanted data from the
-								 * stream.
-								 */
-								if (isTtyEnabled) {
-									int idex = 0;
-									synchronized (prevCmd) {
-										/*
-										 * Check if buff contains a prefix of
-										 * prevCmd ignoring differences in
-										 * carriage return (10,13). Save the
-										 * prefix's ending index.
-										 */
-										for (int i = 0; i < prevCmd.length; i++) {
-											if (prevCmd[i] != buff[i]
-													&& (prevCmd[i] != 10 && buff[i] != 13)
-													&& (prevCmd[i] != 13 && buff[i] != 10)
-													&& prevCmd[i] != 0) {
-												idex = 0;
-												break;
-											} else if (prevCmd[i] != 0) {
-												idex++;
-											}
-										}
-									}
-									// A prefix exists, remove it
-									// Do not include the ending NL/CR
-									if (idex != 0) {
-										shiftLeft(buff, idex + 1);
-									}
-									n = removeTerminalCodes(buff);
-								} else {
-									/*
-									 * If not in TTY mode, first 8 bytes are
-									 * header data describing payload which we
-									 * don't need.
-									 */
-									shiftLeft(buff, 8);
-									n = n - 8;
-								}
-								out.write(buff, 0, n);
-							}
-						}
-					} catch (Exception e) {
-						/*
-						 * Temporary workaround for BZ #469717
-						 * Remove this when we begin using a release with :
-						 * https://github.com/spotify/docker-client/pull/223
-						 */
-						if (e instanceof SocketTimeoutException) {
-							try {
-								attachCommand(id, in, out);
-							} catch (DockerException e1) {
-							}
-						}
-					}
-				}
-			});
-
-			/*
-			 * Our handling of STDOUT for terminals is mandatory, but the
-			 * logging framework can handle catching output very early so use it
-			 * for now.
-			 */
-			if (isTtyEnabled) {
-				t_out.start();
+			if (!isTtyEnabled && isOpenStdin) {
+				t_in.start();
 			}
-
-			return HttpHijackWorkaround.getOutputStream(pty_stream, getUri());
 		} catch (Exception e) {
 			throw new DockerException(e.getMessage(), e.getCause());
 		}
-	}
-
-	/*
-	 * Incoming data from container's STDOUT contains terminal codes which the
-	 * Eclipse Console does not support. Either we install/use some terminal
-	 * plugin that does, or we need to remove these.
-	 */
-	private static int removeTerminalCodes(final byte[] buff) {
-		String tmp = new String(buff);
-		byte[] tmp_buff = tmp.replaceAll("\u001B]0;.*\u0007", "")
-				.replaceAll("\u001B\\[([0-9]{1,2}(;[0-9]{1,2})?)?[mK]", "")
-				.replaceAll("\u001B\\[\\?[0-9]{1,4}h\\[", "").getBytes();
-		for (int i = 0; i < buff.length; i++) {
-			if (i >= tmp_buff.length) {
-				buff[i] = 0;
-			} else {
-				buff[i] = tmp_buff[i];
-			}
-		}
-		return getByteLength(buff);
-	}
-
-	/*
-	 * Shift contents of buff[idex] .. buff[buff.length-1] to buff[0] ..
-	 * buff[(buff.length-1) - idex]
-	 */
-	private static void shiftLeft(byte[] buff, int idex) {
-		for (int i = 0; i < buff.length; i++) {
-			if (idex + i < buff.length) {
-				buff[i] = buff[idex + i];
-			} else {
-				buff[i] = 0;
-			}
-		}
-	}
-
-	/*
-	 * Get the number of non-zero bytes from the beginning of the byte array.
-	 */
-	private static int getByteLength(byte[] buff) {
-		int n;
-		for (n = 0; n < buff.length; n++) {
-			if (buff[n] == 0) {
-				break;
-			}
-		}
-		if ((n == buff.length - 1) && buff[buff.length - 1] != 0) {
-			return buff.length;
-		}
-		return n;
 	}
 
 	@Override
@@ -1503,6 +1395,51 @@ public class DockerConnection implements IDockerConnection, Closeable {
 	@Override
 	public String toString() {
 		return name;
+	}
+
+	public static OutputStream myNewOutputStream(final WritableByteChannel ch) {
+		return new OutputStream() {
+
+			private ByteBuffer bb = null;
+			private byte[] bs = null; // Invoker's previous array
+			private byte[] b1 = null;
+
+			@Override
+			public synchronized void write(int b) throws IOException {
+				if (b1 == null)
+					b1 = new byte[1];
+				b1[0] = (byte) b;
+				this.write(b1);
+			}
+
+			@Override
+			public synchronized void write(byte[] bs, int off, int len)
+					throws IOException {
+				if ((off < 0) || (off > bs.length) || (len < 0)
+						|| ((off + len) > bs.length) || ((off + len) < 0)) {
+					throw new IndexOutOfBoundsException();
+				} else if (len == 0) {
+					return;
+				}
+				ByteBuffer bb = ((this.bs == bs) ? this.bb
+						: ByteBuffer.wrap(bs));
+				bb.limit(Math.min(off + len, bb.capacity()));
+				bb.position(off);
+				this.bb = bb;
+				this.bs = bs;
+
+				while (bb.remaining() > 0) {
+					int n = ch.write(bb);
+					if (n <= 0)
+						throw new RuntimeException("no bytes written");
+				}
+			}
+
+			@Override
+			public void close() throws IOException {
+				ch.close();
+			}
+		};
 	}
 
 }

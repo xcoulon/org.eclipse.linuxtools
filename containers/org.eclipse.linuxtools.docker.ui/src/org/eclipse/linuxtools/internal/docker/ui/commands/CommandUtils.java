@@ -245,8 +245,13 @@ public class CommandUtils {
 	 * @return the {@link RunConsole} or {@code null}
 	 */
 	public static RunConsole getRunConsole(final IDockerConnection connection, final IDockerContainer container) {
+		if (connection.getContainerInfo(container.id()).config().tty()) {
+			RunConsole.attachToTerminalTM(connection, container.id());
+			return null;
+		}
 		final boolean autoLogOnStart = Activator.getDefault().getPreferenceStore()
 				.getBoolean(PreferenceConstants.AUTOLOG_ON_START);
+
 		// if we are auto-logging, grab the
 		// console for the container id and get
 		// its stream.
