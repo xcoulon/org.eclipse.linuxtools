@@ -12,6 +12,7 @@ package org.eclipse.linuxtools.internal.docker.ui.wizards;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -103,13 +104,17 @@ public class ImageRunResourceVolumesVariablesModel
 		if (this.selectedImage == null
 				|| !this.selectedImage.equals(selectedImage)) {
 			this.selectedImage = selectedImage;
+			if (selectedImage != null) {
 				this.imageInfo = selectedImage.getConnection()
 						.getImageInfo(selectedImage.id());
-			final List<DataVolumeModel> volumes = new ArrayList<>();
-			for (String volume : this.imageInfo.config().volumes()) {
-				volumes.add(new DataVolumeModel(volume));
+				final List<DataVolumeModel> volumes = new ArrayList<>();
+				for (String volume : this.imageInfo.config().volumes()) {
+					volumes.add(new DataVolumeModel(volume));
+				}
+				setDataVolumes(volumes);
+			} else {
+				setDataVolumes(Collections.<DataVolumeModel> emptyList());
 			}
-			setDataVolumes(volumes);
 		}
 
 	}

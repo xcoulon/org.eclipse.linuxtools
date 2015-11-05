@@ -65,6 +65,7 @@ import org.eclipse.jface.viewers.TableViewerColumn;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.linuxtools.docker.core.DockerException;
 import org.eclipse.linuxtools.docker.core.IDockerConnection;
+import org.eclipse.linuxtools.docker.core.IDockerContainer;
 import org.eclipse.linuxtools.docker.core.IDockerImage;
 import org.eclipse.linuxtools.docker.core.IDockerImageInfo;
 import org.eclipse.linuxtools.docker.ui.Activator;
@@ -108,7 +109,7 @@ public class ImageRunSelectionPage extends WizardPage {
 	private final DataBindingContext dbc = new DataBindingContext();
 	private final ImageRunSelectionModel model;
 
-	private final boolean needsDefaultValues;
+	private final ILaunchConfiguration lastLaunchConfiguration;
 	private static final int COLUMNS = 3;
 
 	/**
@@ -119,41 +120,17 @@ public class ImageRunSelectionPage extends WizardPage {
 	 * @param lastLaunchConfiguration
 	 *            the last {@link ILaunchConfiguration} used to run this
 	 *            {@link IDockerImage} or <code>null</code> if none exists.
-	 * @throws CoreException
-	 *             if reading attributes from {@link ILaunchConfiguration}
-	 *             failed
 	 * 
 	 */
 	public ImageRunSelectionPage(final IDockerImage selectedImage,
-			final ILaunchConfiguration lastLaunchConfiguration)
-					throws CoreException {
+			final ILaunchConfiguration lastLaunchConfiguration) {
 		super("ImageSelectionPage", //$NON-NLS-1$
 				WizardMessages.getString("ImageSelectionPage.title"), //$NON-NLS-1$
 				SWTImagesFactory.DESC_BANNER_REPOSITORY);
 		setMessage(WizardMessages.getString("ImageSelectionPage.runImage")); //$NON-NLS-1$
 		setPageComplete(true);
 		this.model = new ImageRunSelectionModel(selectedImage);
-		if (lastLaunchConfiguration != null) {
-			this.needsDefaultValues = false;
-			this.model.setContainerName(
-					lastLaunchConfiguration.getAttribute(CONTAINER_NAME, ""));
-			this.model.setCommand(lastLaunchConfiguration.getAttribute(COMMAND,
-					Collections.<String> emptyList()));
-			this.model.setEntrypoint(lastLaunchConfiguration.getAttribute(
-					ENTRYPOINT, Collections.<String> emptyList()));
-			this.model.setPublishAllPorts(lastLaunchConfiguration
-					.getAttribute(PUBLISH_ALL_PORTS, false));
-			this.model.setExposedPorts(lastLaunchConfiguration.getAttribute(
-					PUBLISHED_PORTS, Collections.<String> emptyList()));
-			// links
-			this.model.setLinks(lastLaunchConfiguration.getAttribute(LINKS,
-					Collections.<String> emptyList()));
-			// other options
-			this.model.setRemoveWhenExits(
-					lastLaunchConfiguration.getAttribute(AUTO_REMOVE, false));
-		} else {
-			needsDefaultValues = true;
-		}
+		this.lastLaunchConfiguration = lastLaunchConfiguration;
 	}
 
 	/**
@@ -171,7 +148,7 @@ public class ImageRunSelectionPage extends WizardPage {
 				.getString("ImageRunSelectionPage.exposedPortMsg")); //$NON-NLS-1$
 		setPageComplete(false);
 		this.model = new ImageRunSelectionModel(selectedConnection);
-		this.needsDefaultValues = true;
+		this.lastLaunchConfiguration = null;
 	}
 
 	/**
@@ -215,6 +192,15 @@ public class ImageRunSelectionPage extends WizardPage {
 		final ImageSelectionValidator imageSelectionValidator = new ImageSelectionValidator(
 				imageSelectionObservable);
 		dbc.addValidationStatusProvider(imageSelectionValidator);
+		final IObservableValue containerNameObservable = BeanProperties
+				.value(ImageRunSelectionModel.class,
+						ImageRunSelectionModel.CONTAINER_NAME)
+				.observe(model);
+		imageSelectionObservable
+				.addValueChangeListener(onImageSelectionChange());
+		final ContainerNameValidator containerNameValidator = new ContainerNameValidator(
+				model.getSelectedConnection(), containerNameObservable);
+		dbc.addValidationStatusProvider(containerNameValidator);
 		//
 		setControl(container);
 	}
@@ -695,10 +681,14 @@ public class ImageRunSelectionPage extends WizardPage {
 				// skip if the selected image does not exist in the local Docker
 				// host
 				if (selectedImage == null) {
-					model.setExposedPorts(Collections.<String> emptyList());
+					model.setExposedPorts(
+							Collections.<ExposedPortModel> emptyList());
 					return;
 				}
-				applyImageInfo(selectedImage);
+				final IDockerImageInfo selectedImageInfo = getImageInfo(
+						selectedImage);
+
+				applyImageInfo(selectedImageInfo);
 			}
 		};
 	}
@@ -807,36 +797,82 @@ public class ImageRunSelectionPage extends WizardPage {
 		};
 	}
 
+	/**
+	 * Sets the default values from the optional given {@link IDockerImage} and
+	 * {@link ILaunchConfiguration} elements
+	 */
 	private void setDefaultValues() {
-		// skip if a previous launch configuration was provided
-		if (!this.needsDefaultValues) {
-			return;
-		}
 		final IDockerImage selectedImage = model.getSelectedImage();
 		if (selectedImage == null) {
 			return;
 		}
-		applyImageInfo(selectedImage);
+		final IDockerImageInfo selectedImageInfo = getImageInfo(selectedImage);
+
+		// skip if a previous launch configuration was provided
+		if (this.lastLaunchConfiguration != null) {
+			try {
+				this.model.setContainerName(lastLaunchConfiguration
+						.getAttribute(CONTAINER_NAME, ""));
+				this.model.setCommand(lastLaunchConfiguration.getAttribute(
+						COMMAND, Collections.<String> emptyList()));
+				this.model.setEntrypoint(lastLaunchConfiguration.getAttribute(
+						ENTRYPOINT, Collections.<String> emptyList()));
+				this.model.setPublishAllPorts(lastLaunchConfiguration
+						.getAttribute(PUBLISH_ALL_PORTS, false));
+				final List<String> exposedPortInfos = lastLaunchConfiguration
+						.getAttribute(PUBLISHED_PORTS,
+								Collections.<String> emptyList());
+				// FIXME: handle the case where ports where added (and selected)
+				// by the user.
+				final List<ExposedPortModel> exposedPorts = ExposedPortModel
+						.fromStrings(selectedImageInfo.config().exposedPorts());
+				model.setExposedPorts(exposedPorts);
+				final List<ExposedPortModel> selectedExposedPorts = ExposedPortModel
+						.fromStrings(exposedPortInfos);
+				this.model
+						.setSelectedPorts(new HashSet<>(selectedExposedPorts));
+
+				// links
+				this.model.setLinks(lastLaunchConfiguration.getAttribute(LINKS,
+						Collections.<String> emptyList()));
+				// other options
+				this.model.setRemoveWhenExits(lastLaunchConfiguration
+						.getAttribute(AUTO_REMOVE, false));
+			} catch (CoreException e) {
+				Activator.log(e);
+			}
+		} else {
+			applyImageInfo(selectedImageInfo);
+		}
 	}
 
-	private void applyImageInfo(final IDockerImage selectedImage) {
+	/**
+	 * @param selectedImage
+	 * @return the corresponding {@link IDockerImageInfo} or <code>null</code>
+	 *         if something went wrong.
+	 */
+	private IDockerImageInfo getImageInfo(final IDockerImage selectedImage) {
 		try {
 			final FindImageInfoRunnable findImageInfoRunnable = new FindImageInfoRunnable(
 					selectedImage);
 			getContainer().run(true, true, findImageInfoRunnable);
 			final IDockerImageInfo selectedImageInfo = findImageInfoRunnable
 					.getResult();
+			return selectedImageInfo;
+		} catch (InvocationTargetException | InterruptedException e) {
+			Activator.log(e);
+		}
+		return null;
+	}
+
+	private void applyImageInfo(final IDockerImageInfo selectedImageInfo) {
 			if (selectedImageInfo != null) {
-				final List<String> exposedPorts = new ArrayList<>(
-						selectedImageInfo.config().exposedPorts());
-				Collections.sort(exposedPorts);
+				final List<ExposedPortModel> exposedPorts = ExposedPortModel
+						.fromStrings(selectedImageInfo.config().exposedPorts());
 				model.setExposedPorts(exposedPorts);
 				model.setCommand(selectedImageInfo.config().cmd());
 				model.setEntrypoint(selectedImageInfo.config().entrypoint());
 			}
-		} catch (InvocationTargetException | InterruptedException e) {
-			Activator.log(e);
-		}
 	}
 
 	private void togglePortMappingControls(final Control... controls) {
@@ -930,6 +966,41 @@ public class ImageRunSelectionPage extends WizardPage {
 		public IObservableList getTargets() {
 			WritableList targets = new WritableList();
 			targets.add(imageSelectionObservable);
+			return targets;
+		}
+
+	}
+
+	private class ContainerNameValidator extends MultiValidator {
+
+		private final IDockerConnection connection;
+
+		private final IObservableValue containerNameObservable;
+
+		ContainerNameValidator(final IDockerConnection connection,
+				final IObservableValue containerNameObservable) {
+			this.connection = connection;
+			this.containerNameObservable = containerNameObservable;
+		}
+
+		@Override
+		protected IStatus validate() {
+			final String containerName = (String) containerNameObservable
+					.getValue();
+
+			for (IDockerContainer container : connection.getContainers()) {
+				if (container.name().equals(containerName)) {
+					return ValidationStatus.warning(WizardMessages.getString(
+							"ImageRunSelectionPage.containerWithSameName")); //$NON-NLS-1$
+				}
+			}
+			return ValidationStatus.ok();
+		}
+
+		@Override
+		public IObservableList getTargets() {
+			WritableList targets = new WritableList();
+			targets.add(containerNameObservable);
 			return targets;
 		}
 

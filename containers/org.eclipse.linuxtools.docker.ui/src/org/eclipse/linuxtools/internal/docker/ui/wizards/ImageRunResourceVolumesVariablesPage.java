@@ -394,14 +394,10 @@ image);
 				// TODO: convert host_path back to WinOS32 if necessary
 				// host volume pattern: <host_path>:<container_path>:Z<,ro>
 				for (String hostVolume : hostVolumes) {
-					final String[] items = hostVolume.split(":");
-					if (items.length == 3) {
-						final String hostPath = items[0];
-						final String containerPath = items[1];
-						final boolean readOnly = items[2].indexOf("ro") != -1;
-						final DataVolumeModel volume = new DataVolumeModel(
-								containerPath, hostPath, readOnly);
-						volumes.put(containerPath, volume);
+					final DataVolumeModel volume = DataVolumeModel
+							.hostVolumeFromString(hostVolume);
+					if (volume != null) {
+						volumes.put(volume.getContainerPath(), volume);
 						selectedVolumes.add(volume);
 					}
 				}
