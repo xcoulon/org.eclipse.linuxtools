@@ -150,7 +150,7 @@ public class DockerExplorerLabelProvider implements IStyledLabelProvider, ILabel
 			if (!dockerImage.tags().isEmpty()) {
 				final List<String> tags = new ArrayList<>(dockerImage.tags());
 				Collections.sort(tags);
-				messageBuilder.append(": ");
+				messageBuilder.append(":");
 				for (Iterator<String> tagIterator = tags.iterator(); tagIterator
 						.hasNext();) {
 					messageBuilder.append(tagIterator.next());
