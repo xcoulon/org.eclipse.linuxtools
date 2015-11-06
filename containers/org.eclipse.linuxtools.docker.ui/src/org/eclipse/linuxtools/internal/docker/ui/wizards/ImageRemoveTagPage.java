@@ -18,6 +18,9 @@ import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.linuxtools.docker.core.IDockerImage;
 import org.eclipse.linuxtools.internal.docker.ui.SWTImagesFactory;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
@@ -31,10 +34,11 @@ public class ImageRemoveTagPage extends WizardPage {
 	private final static String REMOVE_TAG_LABEL = "ImageRemoveTagName.label"; //$NON-NLS-1$
 	private final static String REMOVE_TAG_TOOLTIP = "ImageRemoveTagName.toolTip"; //$NON-NLS-1$
 
-	private Combo tagCombo;
+	private String tag;
 	private IDockerImage image;
 
-	public ImageRemoveTagPage(IDockerImage image) {
+
+	public ImageRemoveTagPage(final IDockerImage image) {
 		super(WizardMessages.getString(NAME));
 		setDescription(WizardMessages.getString(DESC));
 		setTitle(WizardMessages.getString(TITLE));
@@ -43,11 +47,11 @@ public class ImageRemoveTagPage extends WizardPage {
 	}
 
 	public String getTag() {
-		return tagCombo.getText();
+		return tag;
 	}
 
 	@Override
-	public void createControl(Composite parent) {
+	public void createControl(final Composite parent) {
 		parent.setLayout(new GridLayout());
 		final Composite container = new Composite(parent, SWT.NONE);
 		GridLayoutFactory.fillDefaults().numColumns(2).margins(6, 6)
@@ -59,18 +63,31 @@ public class ImageRemoveTagPage extends WizardPage {
 		repoLabel.setText(WizardMessages.getString(REMOVE_TAG_LABEL));
 		GridDataFactory.fillDefaults().align(SWT.FILL, SWT.CENTER)
 				.grab(false, false).applyTo(repoLabel);
-		tagCombo = new Combo(container, SWT.BORDER | SWT.READ_ONLY);
+		final Combo tagCombo = new Combo(container, SWT.BORDER | SWT.READ_ONLY);
 		tagCombo.setToolTipText(WizardMessages.getString(REMOVE_TAG_TOOLTIP));
 		// Set up combo with repoTags that can be removed
 		final List<String> repoTags = image.repoTags();
 		tagCombo.setItems(repoTags.toArray(new String[0]));
+		// default value
 		tagCombo.select(0);
+		this.tag = tagCombo.getText();
 
 		GridDataFactory.fillDefaults().align(SWT.FILL, SWT.CENTER)
 				.grab(true, false).applyTo(tagCombo);
-
+		tagCombo.addSelectionListener(onSelectionChanged());
 		setControl(container);
-		setPageComplete(false);
+		setPageComplete(true);
+	}
+
+	private SelectionListener onSelectionChanged() {
+		return new SelectionAdapter() {
+
+			@Override
+			public void widgetSelected(final SelectionEvent e) {
+				final Combo combo = (Combo) e.getSource();
+				ImageRemoveTagPage.this.tag = combo.getText();
+			}
+		};
 	}
 
 }

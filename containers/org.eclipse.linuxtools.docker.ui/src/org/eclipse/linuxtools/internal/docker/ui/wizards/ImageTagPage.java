@@ -45,7 +45,7 @@ public class ImageTagPage extends WizardPage {
 		return tag;
 	}
 
-	private ModifyListener Listener = new ModifyListener() {
+	private ModifyListener listener = new ModifyListener() {
 
 		@Override
 		public void modifyText(ModifyEvent e) {
@@ -85,7 +85,7 @@ public class ImageTagPage extends WizardPage {
 				.grab(false, false).applyTo(repoLabel);
 
 		tagText = new Text(container, SWT.BORDER | SWT.SINGLE);
-		tagText.addModifyListener(Listener);
+		tagText.addModifyListener(listener);
 		tagText.setToolTipText(WizardMessages.getString(TAG_TOOLTIP));
 		GridDataFactory.fillDefaults().align(SWT.FILL, SWT.CENTER)
 				.grab(true, false).applyTo(tagText);
