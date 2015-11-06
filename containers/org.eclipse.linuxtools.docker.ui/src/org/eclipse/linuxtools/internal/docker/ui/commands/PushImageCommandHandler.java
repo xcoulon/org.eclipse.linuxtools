@@ -21,7 +21,6 @@ import org.eclipse.linuxtools.docker.core.DockerException;
 import org.eclipse.linuxtools.docker.core.IDockerConnection;
 import org.eclipse.linuxtools.internal.docker.core.DockerConnection;
 import org.eclipse.linuxtools.internal.docker.ui.views.DVMessages;
-import org.eclipse.linuxtools.internal.docker.ui.views.DockerImagesView;
 import org.eclipse.linuxtools.internal.docker.ui.views.ImagePushProgressHandler;
 import org.eclipse.linuxtools.internal.docker.ui.wizards.ImagePush;
 import org.eclipse.swt.widgets.Display;
@@ -34,8 +33,6 @@ public class PushImageCommandHandler extends AbstractHandler {
 	private final static String PUSH_IMAGE_JOB_TASK = "ImagePush.msg"; //$NON-NLS-1$
 	private static final String ERROR_PUSHING_IMAGE = "ImagePushError.msg"; //$NON-NLS-1$
 	
-	private IDockerConnection connection;
-
 	@Override
 	public Object execute(final ExecutionEvent event) {
 		final IWorkbenchPart activePart = HandlerUtil.getActivePart(event);
@@ -43,16 +40,15 @@ public class PushImageCommandHandler extends AbstractHandler {
 		final boolean pushImage = CommandUtils.openWizard(wizard,
 				HandlerUtil.getActiveShell(event));
 		if (pushImage) {
-			if (activePart instanceof DockerImagesView) {
-				connection = ((DockerImagesView) activePart)
-						.getConnection();
-			}
-			performPushImage(wizard);
+			final IDockerConnection connection = CommandUtils
+					.getCurrentConnection(activePart);
+			performPushImage(connection, wizard);
 		}
 		return null;
 	}
 	
-	private void performPushImage(final ImagePush wizard) {
+	private void performPushImage(final IDockerConnection connection,
+			final ImagePush wizard) {
 		final Job pushImageJob = new Job(DVMessages.getFormattedString(
 				PUSH_IMAGE_JOB_TITLE, wizard.getImageTag())) {
 
