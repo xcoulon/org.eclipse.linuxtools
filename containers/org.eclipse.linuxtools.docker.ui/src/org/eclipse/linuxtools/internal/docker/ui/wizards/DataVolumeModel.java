@@ -76,6 +76,32 @@ public class DataVolumeModel extends BaseDatabindingModel
 		}
 	}
 
+	/**
+	 * Create a DataVolumeModel from a toString() output.
+	 * 
+	 * @param fromString
+	 * @return DataVolumeModel
+	 */
+	public static DataVolumeModel createDataVolumeModel(
+			final String fromString) {
+		DataVolumeModel model = new DataVolumeModel();
+		String[] s = fromString.split(","); //$NON-NLS-1$
+		model.containerPath = s[0];
+		model.mountType = MountType.valueOf(s[1]);
+		switch (model.mountType) {
+		case CONTAINER:
+			model.setContainerMount(s[2]);
+			break;
+		case HOST_FILE_SYSTEM:
+			model.setHostPathMount(s[2]);
+			model.setReadOnly(Boolean.valueOf(s[3]));
+			break;
+		case NONE:
+			break;
+		}
+		return model;
+	}
+
 	public String getContainerPath() {
 		return this.containerPath;
 	}
@@ -148,6 +174,24 @@ public class DataVolumeModel extends BaseDatabindingModel
 	@Override
 	public int compareTo(final DataVolumeModel other) {
 		return this.getContainerPath().compareTo(other.getContainerPath());
+	}
+
+	@Override
+	public String toString() {
+		StringBuffer buffer = new StringBuffer();
+		buffer.append(this.containerPath + "," + getMountType() + ","); //$NON-NLS-1$ //$NON-NLS-2$
+		switch (getMountType()) {
+		case CONTAINER:
+			buffer.append(getContainerMount());
+			break;
+		case HOST_FILE_SYSTEM:
+			buffer.append(getHostPathMount() + ","); //$NON-NLS-1$
+			buffer.append(isReadOnly());
+			break;
+		case NONE:
+			break;
+		}
+		return buffer.toString();
 	}
 
 	@Override
