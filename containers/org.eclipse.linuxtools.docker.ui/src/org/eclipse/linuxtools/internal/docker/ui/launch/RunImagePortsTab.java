@@ -16,10 +16,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import org.eclipse.core.databinding.DataBindingContext;
 import org.eclipse.core.databinding.beans.BeanProperties;
-import org.eclipse.core.databinding.observable.list.WritableList;
 import org.eclipse.core.databinding.observable.value.IValueChangeListener;
 import org.eclipse.core.databinding.observable.value.ValueChangeEvent;
 import org.eclipse.core.runtime.CoreException;
@@ -69,9 +69,8 @@ public class RunImagePortsTab extends AbstractLaunchConfigurationTab
 	private static final int COLUMNS = 3;
 
 	private final DataBindingContext dbc = new DataBindingContext();
-	private ImageRunSelectionModel model;
 
-	private CheckboxTableViewer tableViewer;
+	private final ImageRunSelectionModel model;
 
 	public RunImagePortsTab(ImageRunSelectionModel model) {
 		this.model = model;
@@ -166,7 +165,6 @@ public class RunImagePortsTab extends AbstractLaunchConfigurationTab
 						exposedPortsTableViewer, ExposedPortModel.class),
 				BeanProperties.set(ImageRunSelectionModel.SELECTED_PORTS)
 						.observe(model));
-		checkAllElements(exposedPortsTableViewer);
 
 		// disable the edit and removeButton if the table is empty
 		exposedPortsTableViewer.addSelectionChangedListener(
@@ -175,14 +173,6 @@ public class RunImagePortsTab extends AbstractLaunchConfigurationTab
 
 		togglePortMappingControls(exposedPortsTableViewer.getTable(), addButton,
 				removeButton);
-	}
-
-	@SuppressWarnings("unchecked")
-	private void checkAllElements(
-			final CheckboxTableViewer exposedPortsTableViewer) {
-		exposedPortsTableViewer.setAllChecked(true);
-		model.setSelectedPorts(
-				new HashSet<ExposedPortModel>(model.getExposedPorts()));
 	}
 
 	private static void setControlsEnabled(final Control[] controls,
@@ -230,7 +220,7 @@ public class RunImagePortsTab extends AbstractLaunchConfigurationTab
 			final Composite container) {
 		final Table table = new Table(container, SWT.BORDER | SWT.FULL_SELECTION
 				| SWT.V_SCROLL | SWT.H_SCROLL | SWT.CHECK);
-		tableViewer = new CheckboxTableViewer(table);
+		final CheckboxTableViewer tableViewer = new CheckboxTableViewer(table);
 		table.setHeaderVisible(true);
 		table.setLinesVisible(true);
 		createTableViewerColumn(tableViewer,
@@ -272,6 +262,7 @@ public class RunImagePortsTab extends AbstractLaunchConfigurationTab
 			@Override
 			public void handleValueChange(final ValueChangeEvent event) {
 				togglePortMappingControls(controls);
+				updateLaunchConfigurationDialog();
 			}
 		};
 	}
@@ -289,6 +280,7 @@ public class RunImagePortsTab extends AbstractLaunchConfigurationTab
 					model.addAvailablePort(port);
 					model.getSelectedPorts().add(port);
 					exposedPortsTableViewer.setChecked(port, true);
+					updateLaunchConfigurationDialog();
 				}
 			}
 		};
@@ -334,6 +326,7 @@ public class RunImagePortsTab extends AbstractLaunchConfigurationTab
 					final ExposedPortModel port = iterator.next();
 					model.removeAvailablePort(port);
 					model.getSelectedPorts().remove(port);
+					updateLaunchConfigurationDialog();
 				}
 			}
 		};
@@ -362,31 +355,28 @@ public class RunImagePortsTab extends AbstractLaunchConfigurationTab
 
 	@Override
 	public void initializeFrom(ILaunchConfiguration configuration) {
-		boolean publishAllPorts = false;
 		try {
-			publishAllPorts = configuration.getAttribute(
+			// recycle the model
+			model.removeExposedPorts();
+			final boolean publishAllPorts = configuration.getAttribute(
 					IRunDockerImageLaunchConfigurationConstants.PUBLISH_ALL_PORTS,
 					true);
 			model.setPublishAllPorts(publishAllPorts);
-			List<String> portsList = new ArrayList<>();
-			portsList = configuration.getAttribute(
-					IRunDockerImageLaunchConfigurationConstants.PUBLISH_PORTS,
+			final List<String> publishedPorts = configuration.getAttribute(
+					IRunDockerImageLaunchConfigurationConstants.PUBLISHED_PORTS,
 					new ArrayList<String>());
-
-			WritableList exposedPorts = new WritableList();
-			for (String s : portsList) {
-				ImageRunSelectionModel.ExposedPortModel m = ImageRunSelectionModel.ExposedPortModel
-						.createPortModel(s);
-				exposedPorts.add(m);
-			}
-			model.setExposedPorts(exposedPorts);
-			for (Object o : exposedPorts) {
-				ImageRunSelectionModel.ExposedPortModel m = (ImageRunSelectionModel.ExposedPortModel) o;
-				if (m.getSelected()) {
-					model.getSelectedPorts().add(m);
-					tableViewer.setChecked(o, true);
+			final Set<ExposedPortModel> selectedPorts = new HashSet<>();
+			for (String port : publishedPorts) {
+				final ImageRunSelectionModel.ExposedPortModel exposedPort = ImageRunSelectionModel.ExposedPortModel
+						.createPortModel(port);
+				model.addExposedPort(exposedPort);
+				if (exposedPort.getSelected()) {
+					selectedPorts.add(exposedPort);
 				}
 			}
+			// select ports
+			model.setSelectedPorts(selectedPorts);
+
 			// update the underlying launch config working copy on model
 			// changes.
 			model.addPropertyChangeListener(
@@ -411,7 +401,7 @@ public class RunImagePortsTab extends AbstractLaunchConfigurationTab
 			portsList.add(m.toString());
 		}
 		configuration.setAttribute(
-				IRunDockerImageLaunchConfigurationConstants.PUBLISH_PORTS,
+				IRunDockerImageLaunchConfigurationConstants.PUBLISHED_PORTS,
 				portsList);
 	}
 

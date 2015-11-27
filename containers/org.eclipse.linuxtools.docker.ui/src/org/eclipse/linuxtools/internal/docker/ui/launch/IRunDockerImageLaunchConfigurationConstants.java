@@ -28,7 +28,7 @@ public interface IRunDockerImageLaunchConfigurationConstants {
 
 	public static final String PUBLISH_ALL_PORTS = "publishAllPorts"; //$NON-NLS-1$
 
-	public static final String PUBLISH_PORTS = "publishPorts"; //$NON-NLS-1$
+	public static final String PUBLISHED_PORTS = "publishedPorts"; //$NON-NLS-1$
 
 	public static final String LINKS = "links"; //$NON-NLS-1$
 
@@ -39,8 +39,6 @@ public interface IRunDockerImageLaunchConfigurationConstants {
 	public static final String AUTO_REMOVE = "autoRemove"; //$NON-NLS-1$
 
 	public static final String DATA_VOLUME = "volumes"; //$NON-NLS-1$
-
-	public static final String SELECTED_VOLUMES = "selectedVolumes"; //$NON-NLS-1$
 
 	public static final String VOLUMES_FROM = "volumesFrom"; //$NON-NLS-1$
 

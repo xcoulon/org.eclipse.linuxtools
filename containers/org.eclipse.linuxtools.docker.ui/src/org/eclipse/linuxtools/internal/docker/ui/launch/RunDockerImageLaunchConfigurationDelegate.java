@@ -87,7 +87,7 @@ public class RunDockerImageLaunchConfigurationDelegate
 		} else {
 			final Map<String, List<IDockerPortBinding>> portBindings = new HashMap<>();
 			Map<String, String> ports = config.getAttribute(
-					IRunDockerImageLaunchConfigurationConstants.PUBLISH_PORTS,
+					IRunDockerImageLaunchConfigurationConstants.PUBLISHED_PORTS,
 					new HashMap<String, String>());
 			for (Map.Entry<String, String> entry : ports.entrySet()) {
 				String key = entry.getKey();

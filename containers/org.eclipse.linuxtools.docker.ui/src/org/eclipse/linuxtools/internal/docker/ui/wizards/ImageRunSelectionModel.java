@@ -13,7 +13,6 @@ package org.eclipse.linuxtools.internal.docker.ui.wizards;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -88,11 +87,11 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 
 	private boolean publishAllPorts = true;
 
-	private WritableList exposedPorts = new WritableList();
+	private final WritableList exposedPorts = new WritableList();
 
-	private Set<ExposedPortModel> selectedPorts = new HashSet<>();
+	private Set<ExposedPortModel> selectedPorts;
 
-	private WritableList links = new WritableList();
+	private final WritableList links = new WritableList();
 
 	private boolean interactiveMode = false;
 
@@ -121,13 +120,15 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 	public void refreshImageNames() {
 		this.imageNames = new ArrayList<>();
 		this.images = new HashMap<>();
-		for (IDockerImage image : getSelectedConnection().getImages()) {
-			if (!image.isIntermediateImage() && !image.isDangling()) {
-				for (String tag : image.tags()) {
-					final String imageName = ImageRunSelectionModel
-							.getImageName(image.repo(), tag);
-					images.put(imageName, image);
-					imageNames.add(imageName);
+		if (getSelectedConnection() != null) {
+			for (IDockerImage image : getSelectedConnection().getImages()) {
+				if (!image.isIntermediateImage() && !image.isDangling()) {
+					for (String tag : image.tags()) {
+						final String imageName = ImageRunSelectionModel
+								.getImageName(image.repo(), tag);
+						images.put(imageName, image);
+						imageNames.add(imageName);
+					}
 				}
 			}
 		}
@@ -279,8 +280,22 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 		this.exposedPorts.addAll(ports);
 	}
 
+	public void removeExposedPorts() {
+		this.exposedPorts.clear();
+	}
+
+	public void addExposedPort(final ExposedPortModel exposedPort) {
+		if (!this.exposedPorts.contains(exposedPort)) {
+			this.exposedPorts.add(exposedPort);
+		}
+	}
+
+	public void removeExposedPort(final ExposedPortModel exposedPort) {
+		this.exposedPorts.remove(exposedPort);
+	}
+
 	public Set<ExposedPortModel> getSelectedPorts() {
-		return selectedPorts;
+		return this.selectedPorts;
 	}
 
 	public void setSelectedPorts(final Set<ExposedPortModel> ports) {
@@ -294,7 +309,11 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 
 	public void addLink(final String containerName,
 			final String containerAlias) {
-		links.add(new ContainerLinkModel(containerName, containerAlias));
+		addLink(new ContainerLinkModel(containerName, containerAlias));
+	}
+
+	public void addLink(final ContainerLinkModel containerLink) {
+		links.add(containerLink);
 	}
 
 	public void addLink(final int index, final String containerName,
@@ -306,8 +325,13 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 		links.remove(link);
 	}
 
+	public void removeLinks() {
+		this.links.clear();
+	}
+
 	public void setLinks(final WritableList links) {
-		firePropertyChange(LINKS, this.links, this.links = links);
+		this.links.clear();
+		this.links.addAll(links);
 	}
 
 	public static String getImageName(final String repo, final String tag) {
@@ -343,6 +367,8 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 
 	public static class ExposedPortModel extends BaseDatabindingModel
 			implements Comparable<ExposedPortModel> {
+
+		private static final String SEPARATOR = ":"; //$NON-NLS-1$
 
 		public static final String SELECTED = "selected"; //$NON-NLS-1$
 
@@ -386,13 +412,13 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 		}
 
 		/**
-		 * Create an ExposedPortModel from it's toString output
+		 * Create an ExposedPortModel from its toString output
 		 * 
 		 * @param fromString
 		 * @return ExposedPortModel
 		 */
 		static public ExposedPortModel createPortModel(String fromString) {
-			String[] s = fromString.split(","); //$NON-NLS-1$
+			String[] s = fromString.split(SEPARATOR);
 			ExposedPortModel model = new ExposedPortModel(s[0], s[1], s[2],
 					s[3]);
 			model.selected = Boolean.valueOf(s[4]);
@@ -404,7 +430,7 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 		}
 
 		public void setContainerPort(final String containerPort) {
-			firePropertyChange(SELECTED, this.containerPort,
+			firePropertyChange(CONTAINER_PORT, this.containerPort,
 					this.containerPort = containerPort);
 		}
 
@@ -413,7 +439,7 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 		}
 
 		public void setPortType(final String type) {
-			firePropertyChange(SELECTED, this.portType, this.portType = type);
+			firePropertyChange(PORT_TYPE, this.portType, this.portType = type);
 		}
 
 		public boolean getSelected() {
@@ -473,17 +499,21 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 			return this.containerPort.compareTo(other.containerPort);
 		}
 
+		// FIXME we should have a dedicated method to serialize the bean
 		@Override
 		public String toString() {
 			StringBuffer buffer = new StringBuffer();
-			buffer.append(containerPort + "," + portType + "," + hostAddress //$NON-NLS-1$ //$NON-NLS-2$
-					+ "," + hostPort + "," + selected); //$NON-NLS-1$ //$NON-NLS-2$
+			buffer.append(containerPort + SEPARATOR + portType
+					+ SEPARATOR + hostAddress + SEPARATOR + hostPort
+					+ SEPARATOR + selected);
 			return buffer.toString();
 		}
 
 	}
 
 	public static class ContainerLinkModel extends BaseDatabindingModel {
+
+		private static final String CONTAINER_SEPARATOR = ":"; //$NON-NLS-1$
 
 		public static final String CONTAINER_NAME = "containerName"; //$NON-NLS-1$
 
@@ -507,7 +537,7 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 
 		public static ContainerLinkModel createContainerLinkModel(
 				final String fromString) {
-			String[] s = fromString.split(","); //$NON-NLS-1$
+			String[] s = fromString.split(CONTAINER_SEPARATOR);
 			return new ContainerLinkModel(s[0], s[1]);
 		}
 
@@ -530,7 +560,7 @@ public class ImageRunSelectionModel extends BaseDatabindingModel {
 
 		@Override
 		public String toString() {
-			return containerName + "," + containerAlias; //$NON-NLS-1$
+			return containerName + CONTAINER_SEPARATOR + containerAlias;
 		}
 
 		@Override

@@ -145,6 +145,15 @@ public class ImageRunResourceVolumesVariablesModel
 				this.environmentVariables = environmentVariables);
 	}
 
+	public void addEnvironmentVariable(
+			final EnvironmentVariableModel variable) {
+		this.environmentVariables.add(variable);
+	}
+
+	public void removeEnvironmentVariables() {
+		this.environmentVariables.clear();
+	}
+
 	public void removeEnvironmentVariable(
 			final EnvironmentVariableModel variable) {
 		this.environmentVariables.remove(variable);

@@ -14,10 +14,9 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -29,6 +28,7 @@ import org.eclipse.core.databinding.beans.IBeanValueProperty;
 import org.eclipse.core.databinding.observable.list.IObservableList;
 import org.eclipse.core.databinding.observable.list.WritableList;
 import org.eclipse.core.databinding.observable.map.IObservableMap;
+import org.eclipse.core.databinding.observable.set.IObservableSet;
 import org.eclipse.core.databinding.property.Properties;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Platform;
@@ -42,7 +42,9 @@ import org.eclipse.jface.databinding.viewers.ViewersObservables;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.layout.GridLayoutFactory;
+import org.eclipse.jface.viewers.CheckStateChangedEvent;
 import org.eclipse.jface.viewers.CheckboxTableViewer;
+import org.eclipse.jface.viewers.ICheckStateListener;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
@@ -77,8 +79,6 @@ public class RunImageVolumesTab extends AbstractLaunchConfigurationTab {
 	private final DataBindingContext dbc = new DataBindingContext();
 	private ImageRunResourceVolumesVariablesModel model = null;
 
-	private CheckboxTableViewer dataVolumesTableViewer;
-
 	public RunImageVolumesTab(ImageRunResourceVolumesVariablesModel model) {
 		this.model = model;
 	}
@@ -112,7 +112,7 @@ public class RunImageVolumesTab extends AbstractLaunchConfigurationTab {
 				.getString("ImageRunResourceVolVarPage.dataVolumesLabel")); //$NON-NLS-1$
 		GridDataFactory.fillDefaults().align(SWT.FILL, SWT.CENTER)
 				.grab(true, false).span(COLUMNS, 1).applyTo(volumesLabel);
-		dataVolumesTableViewer = createVolumesTable(
+		final CheckboxTableViewer dataVolumesTableViewer = createVolumesTable(
 				container);
 		GridDataFactory.fillDefaults().align(SWT.FILL, SWT.TOP)
 				.grab(true, false).hint(200, 100)
@@ -123,12 +123,34 @@ public class RunImageVolumesTab extends AbstractLaunchConfigurationTab {
 						new String[] { DataVolumeModel.CONTAINER_PATH,
 								DataVolumeModel.MOUNT,
 								DataVolumeModel.READ_ONLY_VOLUME }));
+		final IObservableSet selectedVolumesObservable = BeanProperties
+				.set(ImageRunResourceVolumesVariablesModel.SELECTED_DATA_VOLUMES)
+				.observe(model);
 		dbc.bindSet(
 				ViewersObservables.observeCheckedElements(
 						dataVolumesTableViewer, DataVolumeModel.class),
-				BeanProperties
-						.set(ImageRunResourceVolumesVariablesModel.SELECTED_DATA_VOLUMES)
-						.observe(model));
+				selectedVolumesObservable);
+		dataVolumesTableViewer.addCheckStateListener(onCheckStateChanged());
+
+		// initializes the checkboxes selection upon loading the model.
+				// remove ?
+				// selectedVolumesObservable.addChangeListener(new
+				// IChangeListener() {
+				//
+				// @Override
+				// public void handleChange(ChangeEvent event) {
+				// final IObservableSet observable = (IObservableSet) event
+				// .getObservable();
+				// for (Iterator<?> iterator = observable.iterator(); iterator
+				// .hasNext();) {
+				// final DataVolumeModel volume = (DataVolumeModel) iterator
+				// .next();
+				// dataVolumesTableViewer.setChecked(volume, true);
+				// }
+				// updateLaunchConfigurationDialog();
+				// }
+				// });
+
 		// buttons
 		final Composite buttonsContainers = new Composite(container, SWT.NONE);
 		GridDataFactory.fillDefaults().align(SWT.FILL, SWT.TOP)
@@ -162,6 +184,24 @@ public class RunImageVolumesTab extends AbstractLaunchConfigurationTab {
 		dataVolumesTableViewer.addSelectionChangedListener(
 				onSelectionChanged(editButton, removeButton));
 
+	}
+
+	private ICheckStateListener onCheckStateChanged() {
+		return new ICheckStateListener() {
+
+			@Override
+			public void checkStateChanged(final CheckStateChangedEvent e) {
+				DataVolumeModel element = (DataVolumeModel) e.getElement();
+				if (e.getChecked()) {
+					model.getSelectedDataVolumes().add(element);
+					element.setSelected(true);
+				} else {
+					model.getSelectedDataVolumes().remove(element);
+					element.setSelected(false);
+				}
+				updateLaunchConfigurationDialog();
+			}
+		};
 	}
 
 	/**
@@ -383,46 +423,27 @@ public class RunImageVolumesTab extends AbstractLaunchConfigurationTab {
 
 	@Override
 	public void setDefaults(ILaunchConfigurationWorkingCopy configuration) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void initializeFrom(ILaunchConfiguration configuration) {
-		WritableList volumes = new WritableList();
-		List<String> volumesList = new ArrayList<>();
-		Map<String, DataVolumeModel> modelsMap = new HashMap<>();
+		final WritableList volumes = new WritableList();
 		try {
-			volumesList = configuration.getAttribute(
+			final List<String> volumesList = configuration.getAttribute(
 					IRunDockerImageLaunchConfigurationConstants.DATA_VOLUME,
 					new ArrayList<String>());
-			Set<DataVolumeModel> selectedVolumes = new TreeSet<>();
-			Set<String> selectedVolumesSet = new TreeSet<>();
-			selectedVolumesSet = configuration.getAttribute(
-					IRunDockerImageLaunchConfigurationConstants.SELECTED_VOLUMES,
-					new TreeSet<String>());
-
-			for (String s : volumesList) {
-				DataVolumeModel m = DataVolumeModel.createDataVolumeModel(s);
-				volumes.add(m);
-				modelsMap.put(m.getContainerPath(), m);
-			}
-
-			for (String s : selectedVolumesSet) {
-				DataVolumeModel m = DataVolumeModel.createDataVolumeModel(s);
-				DataVolumeModel foundModel = modelsMap
-						.get(m.getContainerPath());
-				if (foundModel != null) {
-					selectedVolumes.add(foundModel);
+			final Set<DataVolumeModel> selectedVolumes = new HashSet<>();
+			for (String volume : volumesList) {
+				DataVolumeModel volumeModel = DataVolumeModel
+						.createDataVolumeModel(volume);
+				volumes.add(volumeModel);
+				if (volumeModel.getSelected()) {
+					selectedVolumes.add(volumeModel);
 				}
 			}
 			model.setDataVolumes(volumes);
 			model.setSelectedDataVolumes(selectedVolumes);
-			for (Object o : volumes.toArray()) {
-				if (selectedVolumes.contains(o)) {
-					dataVolumesTableViewer.setChecked(o, true);
-				}
-			}
+
 		} catch (CoreException e) {
 			Activator.logErrorMessage(
 					LaunchMessages.getString(
@@ -481,9 +502,6 @@ public class RunImageVolumesTab extends AbstractLaunchConfigurationTab {
 		configuration.setAttribute(
 				IRunDockerImageLaunchConfigurationConstants.VOLUMES_FROM,
 				volumesFrom);
-		configuration.setAttribute(
-				IRunDockerImageLaunchConfigurationConstants.SELECTED_VOLUMES,
-				selectedVolumesSet);
 		configuration.setAttribute(
 				IRunDockerImageLaunchConfigurationConstants.DATA_VOLUME,
 				volumesList);

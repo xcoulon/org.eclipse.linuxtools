@@ -17,7 +17,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.eclipse.core.databinding.beans.BeanProperties;
-import org.eclipse.core.databinding.observable.list.WritableList;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
@@ -57,8 +56,6 @@ public class RunImageEnvironmentTab extends AbstractLaunchConfigurationTab {
 	private static final int COLUMNS = 3;
 
 	private ImageRunResourceVolumesVariablesModel model = null;
-
-	private TableViewer tableViewer;
 
 	public RunImageEnvironmentTab(ImageRunResourceVolumesVariablesModel model) {
 		this.model = model;
@@ -133,6 +130,7 @@ public class RunImageEnvironmentTab extends AbstractLaunchConfigurationTab {
 				BeanProperties.values(EnvironmentVariableModel.class,
 						new String[] { EnvironmentVariableModel.NAME,
 								EnvironmentVariableModel.VALUE }));
+
 		// disable the edit and removeButton if the table is empty
 		environmentVariablesTableViewer.addSelectionChangedListener(
 				onSelectionChanged(editButton, removeButton));
@@ -171,7 +169,7 @@ public class RunImageEnvironmentTab extends AbstractLaunchConfigurationTab {
 	private TableViewer createEnvironmentVariablesTable(Composite container) {
 		final Table table = new Table(container,
 				SWT.BORDER | SWT.FULL_SELECTION | SWT.V_SCROLL | SWT.H_SCROLL);
-		tableViewer = new TableViewer(table);
+		final TableViewer tableViewer = new TableViewer(table);
 		table.setHeaderVisible(true);
 		table.setLinesVisible(true);
 		addTableViewerColumn(tableViewer,
@@ -263,24 +261,20 @@ public class RunImageEnvironmentTab extends AbstractLaunchConfigurationTab {
 
 	@Override
 	public void setDefaults(ILaunchConfigurationWorkingCopy configuration) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	public void initializeFrom(ILaunchConfiguration configuration) {
-		WritableList env = new WritableList();
-		List<String> envList = new ArrayList<>();
 		try {
-			envList = configuration.getAttribute(
+			model.removeEnvironmentVariables();
+			final List<String> environmentVariables = configuration
+					.getAttribute(
 					IRunDockerImageLaunchConfigurationConstants.ENV_VARIABLES,
 					new ArrayList<String>());
-			for (String s : envList) {
-				env.add(EnvironmentVariableModel
-						.createEnvironmentVariableModel(s));
+			for (String environmenVariable : environmentVariables) {
+				model.addEnvironmentVariable(EnvironmentVariableModel
+						.createEnvironmentVariableModel(environmenVariable));
 			}
-			model.setEnvironmentVariables(env);
-			tableViewer.setInput(env);
 		} catch (CoreException e) {
 			Activator.logErrorMessage(
 					LaunchMessages.getString(

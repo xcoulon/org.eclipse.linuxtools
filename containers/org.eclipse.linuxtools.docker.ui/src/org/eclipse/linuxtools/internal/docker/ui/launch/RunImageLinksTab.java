@@ -17,7 +17,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.eclipse.core.databinding.beans.BeanProperties;
-import org.eclipse.core.databinding.observable.list.WritableList;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
@@ -56,8 +55,6 @@ public class RunImageLinksTab extends AbstractLaunchConfigurationTab {
 	private static final int COLUMNS = 3;
 
 	private ImageRunSelectionModel model = null;
-
-	private TableViewer tableViewer;
 
 	public RunImageLinksTab(ImageRunSelectionModel model) {
 		this.model = model;
@@ -162,7 +159,7 @@ public class RunImageLinksTab extends AbstractLaunchConfigurationTab {
 	private TableViewer createLinksTable(final Composite container) {
 		final Table table = new Table(container,
 				SWT.BORDER | SWT.FULL_SELECTION | SWT.V_SCROLL | SWT.H_SCROLL);
-		tableViewer = new TableViewer(table);
+		final TableViewer tableViewer = new TableViewer(table);
 		table.setHeaderVisible(true);
 		table.setLinesVisible(true);
 		createTableViewerColumn(tableViewer,
@@ -187,6 +184,7 @@ public class RunImageLinksTab extends AbstractLaunchConfigurationTab {
 				if (dialog.open() == IDialogConstants.OK_ID) {
 					model.addLink(dialog.getContainerName(),
 							dialog.getContainerAlias());
+					updateLaunchConfigurationDialog();
 				}
 			}
 		};
@@ -230,6 +228,7 @@ public class RunImageLinksTab extends AbstractLaunchConfigurationTab {
 				Iterator<ContainerLinkModel> iterator = selection
 						.iterator(); iterator.hasNext();) {
 					model.removeLink(iterator.next());
+					updateLaunchConfigurationDialog();
 				}
 			}
 		};
@@ -248,32 +247,29 @@ public class RunImageLinksTab extends AbstractLaunchConfigurationTab {
 	}
 
 	@Override
-	public void setDefaults(ILaunchConfigurationWorkingCopy configuration) {
+	public void setDefaults(
+			final ILaunchConfigurationWorkingCopy configuration) {
 	}
 
 	@Override
-	public void initializeFrom(ILaunchConfiguration configuration) {
-		WritableList links = new WritableList();
-		List<String> linksList = new ArrayList<>();
+	public void initializeFrom(final ILaunchConfiguration configuration) {
 		try {
-			linksList = configuration.getAttribute(
+			// model needs to be recycled
+			model.removeLinks();
+			final List<String> containerLinks = configuration.getAttribute(
 					IRunDockerImageLaunchConfigurationConstants.LINKS,
 					new ArrayList<String>());
+			for (String containerLink : containerLinks) {
+				model.addLink(ImageRunSelectionModel.ContainerLinkModel
+						.createContainerLinkModel(containerLink));
+			}
 		} catch (CoreException e) {
 			// do nothing
 		}
-		for (String s : linksList) {
-			links.add(ImageRunSelectionModel.ContainerLinkModel
-					.createContainerLinkModel(s));
-		}
-		model.setLinks(links);
 		// update the underlying launch config working copy on model
 		// changes.
 		model.addPropertyChangeListener(
 				new LaunchConfigurationChangeListener());
-		// following is needed or table will not show the initial elements on
-		// tab start up
-		tableViewer.setInput(links);
 	}
 
 	@Override
