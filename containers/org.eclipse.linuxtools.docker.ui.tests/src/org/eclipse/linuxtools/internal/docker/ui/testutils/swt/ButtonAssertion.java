@@ -8,18 +8,21 @@
  * Contributors:
  *     Red Hat - Initial Contribution
  *******************************************************************************/
-package org.eclipse.linuxtools.docker.core;
+package org.eclipse.linuxtools.internal.docker.ui.testutils.swt;
 
-import java.util.List;
+import org.eclipse.swtbot.swt.finder.widgets.SWTBotButton;
 
 /**
- * Interface for Docker Connection Settings finder utilities. This bundle
- * provides a default implementation, which can be replaced if needed (hint: for
- * testing purposes)
+ * Custom assertions on a given {@link SWTBotButton}.
  */
-@Deprecated
-public interface IDockerConnectionSettingsFinder {
+public class ButtonAssertion extends AbstractSWTBotAssertion<ButtonAssertion, SWTBotButton> {
+	
+	protected ButtonAssertion(final SWTBotButton actual) {
+		super(actual, ButtonAssertion.class);
+	}
 
-	public List<IDockerConnectionSettings> findConnectionSettings();
+	public static ButtonAssertion assertThat(final SWTBotButton actual) {
+		return new ButtonAssertion(actual);
+	}
 
 }

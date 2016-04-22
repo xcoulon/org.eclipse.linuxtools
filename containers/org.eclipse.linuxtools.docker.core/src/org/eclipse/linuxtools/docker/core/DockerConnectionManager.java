@@ -19,6 +19,7 @@ import org.eclipse.core.runtime.ListenerList;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.linuxtools.internal.docker.core.DefaultDockerConnectionSettingsFinder;
 import org.eclipse.linuxtools.internal.docker.core.DefaultDockerConnectionStorageManager;
+import org.eclipse.linuxtools.internal.docker.core.DefaultDockerRuntimeFinder;
 import org.eclipse.linuxtools.internal.docker.core.DockerContainerRefreshManager;
 
 public class DockerConnectionManager {
@@ -35,6 +36,7 @@ public class DockerConnectionManager {
 	private ListenerList<IDockerConnectionManagerListener> connectionManagerListeners;
 
 	private IDockerConnectionSettingsFinder connectionSettingsFinder = new DefaultDockerConnectionSettingsFinder();
+	private IDockerRuntimesFinder dockerRuntimeFinder = new DefaultDockerRuntimeFinder();
 	private IDockerConnectionStorageManager connectionStorageManager = new DefaultDockerConnectionStorageManager();
 
 	public static DockerConnectionManager getInstance() {
@@ -62,9 +64,29 @@ public class DockerConnectionManager {
 		}
 	}
 
+	@Deprecated
 	public void setConnectionSettingsFinder(
 			final IDockerConnectionSettingsFinder connectionSettingsFinder) {
 		this.connectionSettingsFinder = connectionSettingsFinder;
+	}
+
+	@Deprecated
+	public List<IDockerConnectionSettings> findConnectionSettings() {
+		// delegate the call to a utility class.
+		return connectionSettingsFinder.findConnectionSettings();
+	}
+
+	public void setDockerRuntimesFinder(
+			final IDockerRuntimesFinder dockerRuntimeFinder) {
+		this.dockerRuntimeFinder = dockerRuntimeFinder;
+	}
+
+	public List<IDockerRuntime> findAvailableRuntimes(
+			final String pathToDockerMachine, final String pathToVMDriver) {
+		// delegate the call to a utility class.
+		return this.dockerRuntimeFinder
+				.findExistingDockerRuntimes(pathToDockerMachine,
+						pathToVMDriver);
 	}
 
 	public void setConnectionStorageManager(
@@ -184,11 +206,6 @@ public class DockerConnectionManager {
 				}
 			}
 		}
-	}
-
-	public List<IDockerConnectionSettings> findConnectionSettings() {
-		// delegate the call to a utility class.
-		return connectionSettingsFinder.findConnectionSettings();
 	}
 
 }

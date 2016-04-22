@@ -158,6 +158,7 @@ public class SWTUtils {
 	public static void waitForJobsToComplete() {
 		wait(1, TimeUnit.SECONDS);
 		while (!Job.getJobManager().isIdle()) {
+			//Stream.of(Job.getJobManager().find(null)).filter(job -> job.isBlocking()).for;
 			wait(1, TimeUnit.SECONDS);
 		}
 	}

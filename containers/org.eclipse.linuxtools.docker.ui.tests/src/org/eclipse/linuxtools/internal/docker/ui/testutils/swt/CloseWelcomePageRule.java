@@ -11,6 +11,8 @@
 
 package org.eclipse.linuxtools.internal.docker.ui.testutils.swt;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swtbot.eclipse.finder.SWTWorkbenchBot;
 import org.eclipse.ui.PlatformUI;
@@ -43,8 +45,8 @@ public class CloseWelcomePageRule extends ExternalResource {
 	protected void before() {
 		Display.getDefault().syncExec(() -> {
 				if (PlatformUI.getWorkbench().getIntroManager().getIntro() != null) {
-					PlatformUI.getWorkbench().getIntroManager()
-							.closeIntro(PlatformUI.getWorkbench().getIntroManager().getIntro());
+					assertThat(PlatformUI.getWorkbench().getIntroManager()
+							.closeIntro(PlatformUI.getWorkbench().getIntroManager().getIntro())).isTrue();
 				}
 		});
 		final SWTWorkbenchBot bot = new SWTWorkbenchBot();

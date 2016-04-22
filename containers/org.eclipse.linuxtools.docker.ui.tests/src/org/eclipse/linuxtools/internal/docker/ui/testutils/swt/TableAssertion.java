@@ -8,18 +8,21 @@
  * Contributors:
  *     Red Hat - Initial Contribution
  *******************************************************************************/
-package org.eclipse.linuxtools.docker.core;
+package org.eclipse.linuxtools.internal.docker.ui.testutils.swt;
 
-import java.util.List;
+import org.eclipse.swtbot.swt.finder.widgets.SWTBotTable;
 
 /**
- * Interface for Docker Connection Settings finder utilities. This bundle
- * provides a default implementation, which can be replaced if needed (hint: for
- * testing purposes)
+ * Custom assertions on a given {@link SWTBotTable}.
  */
-@Deprecated
-public interface IDockerConnectionSettingsFinder {
+public class TableAssertion extends AbstractSWTBotAssertion<TableAssertion, SWTBotTable> {
+	
+	protected TableAssertion(final SWTBotTable actual) {
+		super(actual, TableAssertion.class);
+	}
 
-	public List<IDockerConnectionSettings> findConnectionSettings();
+	public static TableAssertion assertThat(final SWTBotTable actual) {
+		return new TableAssertion(actual);
+	}
 
 }

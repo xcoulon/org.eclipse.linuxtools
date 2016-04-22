@@ -15,10 +15,11 @@ import org.eclipse.jface.wizard.Wizard;
 import org.eclipse.linuxtools.docker.core.DockerConnectionManager;
 import org.eclipse.linuxtools.internal.docker.core.DefaultDockerConnectionSettingsFinder;
 import org.eclipse.linuxtools.internal.docker.ui.testutils.MockDockerConnectionSettingsFinder;
-import org.eclipse.linuxtools.internal.docker.ui.testutils.swt.CheckBoxAssertion;
+import org.eclipse.linuxtools.internal.docker.ui.testutils.swt.ButtonAssertion;
 import org.eclipse.linuxtools.internal.docker.ui.testutils.swt.CloseWelcomePageRule;
 import org.eclipse.linuxtools.internal.docker.ui.testutils.swt.RadioAssertion;
 import org.eclipse.linuxtools.internal.docker.ui.testutils.swt.SWTUtils;
+import org.eclipse.linuxtools.internal.docker.ui.testutils.swt.TableAssertion;
 import org.eclipse.linuxtools.internal.docker.ui.testutils.swt.TextAssertion;
 import org.eclipse.linuxtools.internal.docker.ui.views.DockerContainersView;
 import org.eclipse.linuxtools.internal.docker.ui.views.DockerExplorerView;
@@ -26,7 +27,6 @@ import org.eclipse.linuxtools.internal.docker.ui.views.DockerImagesView;
 import org.eclipse.swtbot.eclipse.finder.SWTWorkbenchBot;
 import org.eclipse.swtbot.eclipse.finder.widgets.SWTBotView;
 import org.eclipse.swtbot.swt.finder.junit.SWTBotJunit4ClassRunner;
-import org.eclipse.swtbot.swt.finder.waits.Conditions;
 import org.eclipse.swtbot.swt.finder.widgets.SWTBotToolbarButton;
 import org.eclipse.ui.PlatformUI;
 import org.junit.After;
@@ -51,7 +51,7 @@ public class NewDockerConnectionSWTBotTest {
 	
 	@Before
 	public void lookupDockerExplorerView() throws Exception {
-		SWTUtils.asyncExec(() -> {try {
+		SWTUtils.syncExec(() -> {try {
 			PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage()
 					.showView(DockerExplorerView.VIEW_ID);
 		} catch (Exception e) {
@@ -76,84 +76,118 @@ public class NewDockerConnectionSWTBotTest {
 		DockerConnectionManager.getInstance().setConnectionSettingsFinder(new DefaultDockerConnectionSettingsFinder());
 	}
 
+//	@Test
+//	@Ignore
+//	public void shouldShowCustomUnixSocketSettingsWhenNoConnectionAvailable() {
+//		// given
+//		DockerConnectionManager.getInstance()
+//				.setConnectionSettingsFinder(MockDockerConnectionSettingsFinder.noDockerConnectionAvailable());
+//		// when
+//		// TODO: should wait until dialog appears after call to click()
+//		addConnectionButton.click();
+//		// then
+//		// Empty Connection name
+//		TextAssertion.assertThat(bot.text(0)).isEnabled().isEmpty();
+//		// "Use custom connection settings" should be enabled and checked
+//		CheckBoxAssertion.assertThat(bot.checkBox(0)).isEnabled().isChecked();
+//		// "Unix socket" radio should be enabled and selected
+//		RadioAssertion.assertThat(bot.radio(0)).isEnabled().isSelected();
+//		// "Unix socket path" text should be enabled and empty
+//		TextAssertion.assertThat(bot.text(1)).isEnabled().isEmpty();
+//		// "TCP Connection" radio should be enabled but unselected
+//		RadioAssertion.assertThat(bot.radio(1)).isEnabled().isNotSelected();
+//		// "URI" should be disabled but empty
+//		TextAssertion.assertThat(bot.text(2)).isNotEnabled().isEmpty();
+//		// "Enable Auth" checkbox should be unselected and disabled
+//		CheckBoxAssertion.assertThat(bot.checkBox(1)).isNotEnabled().isNotChecked();
+//		// "Path" for certs should be disabled and empty
+//		TextAssertion.assertThat(bot.text(3)).isNotEnabled().isEmpty();
+//	}
+//
+//	@Test
+//	@Ignore
+//	public void shouldShowDefaultUnixSocketConnectionSettingsWithValidConnectionAvailable() {
+//		// given
+//		MockDockerConnectionSettingsFinder.validUnixSocketConnectionAvailable();
+//		// when
+//		addConnectionButton.click();
+//		// TODO: should wait until dialog appears.
+//		// then
+//		// Connection name
+//		TextAssertion.assertThat(bot.text(0)).isEnabled().textEquals("mock");
+//		// "Use custom connection settings" should be enabled but unchecked
+//		CheckBoxAssertion.assertThat(bot.checkBox(0)).isEnabled().isNotChecked();
+//		// "Unix socket" radio should be disabled and selected
+//		RadioAssertion.assertThat(bot.radio(0)).isNotEnabled().isSelected();
+//		// "Unix socket path" text should be disabled and not empty
+//		TextAssertion.assertThat(bot.text(1)).isNotEnabled().textEquals("unix://var/run/docker.sock");
+//		// "TCP Connection" radio should be unselected and disabled
+//		RadioAssertion.assertThat(bot.radio(1)).isNotEnabled().isNotSelected();
+//		// "URI" should be disabled and empty
+//		TextAssertion.assertThat(bot.text(2)).isNotEnabled().isEmpty();
+//		// "Enable Auth" checkbox should be unselected and disabled
+//		CheckBoxAssertion.assertThat(bot.checkBox(1)).isNotEnabled().isNotChecked();
+//		// "Path" for certs should be disabled but not empty
+//		TextAssertion.assertThat(bot.text(3)).isNotEnabled().isEmpty();
+//	}
+//
+//	@Test
+//	@Ignore
+//	public void shouldShowDefaultTCPSettingsWithValidConnectionAvailable() {
+//		// given
+//		MockDockerConnectionSettingsFinder.validTCPConnectionAvailable();
+//		// when
+//		addConnectionButton.click();
+//		bot.waitUntil(Conditions.shellIsActive(WizardMessages.getString("NewDockerConnection.title"))); //$NON-NLS-1$
+//		// TODO: should wait until dialog appears.
+//		// then
+//		// Connection name
+//		TextAssertion.assertThat(bot.text(0)).isEnabled().textEquals("mock");
+//		// "Use custom connection settings" should be enabled but unchecked
+//		CheckBoxAssertion.assertThat(bot.checkBox(0)).isEnabled().isNotChecked();
+//		// "Unix socket" radio should be disabled and unselected
+//		RadioAssertion.assertThat(bot.radio(0)).isNotEnabled().isNotSelected();
+//		// "Unix socket path" text should be disabled and not empty
+//		TextAssertion.assertThat(bot.text(1)).isNotEnabled().isEmpty();
+//		// "TCP Connection" radio should be selected but diabled
+//		RadioAssertion.assertThat(bot.radio(1)).isNotEnabled().isSelected();
+//		// "URI" should be disabled but not empty
+//		TextAssertion.assertThat(bot.text(2)).isNotEnabled().textEquals("tcp://1.2.3.4:1234");
+//		// "Enable Auth" checkbox should be selected but disabled
+//		CheckBoxAssertion.assertThat(bot.checkBox(1)).isNotEnabled().isChecked();
+//		// "Path" for certs should be disabled but not empty
+//		TextAssertion.assertThat(bot.text(3)).isNotEnabled().textEquals("/path/to/certs");
+//	}
+//	
+//	@Test
+//	@Ignore
+//	public void shouldEnableExistingInstancesTableWhenInstancesAreAvailable() {
+//		// given
+//		MockDockerConnectionSettingsFinder.validTCPConnectionAvailable();
+//		// when
+//		
+//		// then
+//	}
+//	
 	@Test
-	public void shouldShowCustomUnixSocketSettingsWhenNoConnectionAvailable() {
+	public void shouldEnableCustonSettingsByDefaultWhenNoInstanceAvailable() {
 		// given
-		DockerConnectionManager.getInstance()
-				.setConnectionSettingsFinder(MockDockerConnectionSettingsFinder.noDockerConnectionAvailable());
 		// when
-		// TODO: should wait until dialog appears after call to click()
+		MockDockerConnectionSettingsFinder.noExistingDockerInstanceAvailable();
 		addConnectionButton.click();
-		// then
-		// Empty Connection name
-		TextAssertion.assertThat(bot.text(0)).isEnabled().isEmpty();
-		// "Use custom connection settings" should be enabled and checked
-		CheckBoxAssertion.assertThat(bot.checkBox(0)).isEnabled().isChecked();
-		// "Unix socket" radio should be enabled and selected
-		RadioAssertion.assertThat(bot.radio(0)).isEnabled().isSelected();
-		// "Unix socket path" text should be enabled and empty
-		TextAssertion.assertThat(bot.text(1)).isEnabled().isEmpty();
-		// "TCP Connection" radio should be enabled but unselected
-		RadioAssertion.assertThat(bot.radio(1)).isEnabled().isNotSelected();
-		// "URI" should be disabled but empty
-		TextAssertion.assertThat(bot.text(2)).isNotEnabled().isEmpty();
-		// "Enable Auth" checkbox should be unselected and disabled
-		CheckBoxAssertion.assertThat(bot.checkBox(1)).isNotEnabled().isNotChecked();
-		// "Path" for certs should be disabled and empty
-		TextAssertion.assertThat(bot.text(3)).isNotEnabled().isEmpty();
+		//bot.wait();
+		// then widgets for existing runtimes should be unselected/disabled
+		RadioAssertion.assertThat(bot.radio(0)).isEnabled().isNotSelected();
+		TableAssertion.assertThat(bot.table(0)).isNotEnabled();
+		// and widgets for custom settings should be selected/enabled
+		RadioAssertion.assertThat(bot.radio(1)).isEnabled().isSelected();
+		TextAssertion.assertThat(bot.text(0)).isEnabled(); // connection_name
+		TextAssertion.assertThat(bot.text(1)).isEnabled(); // connection_url
+		RadioAssertion.assertThat(bot.radio(2)).isEnabled().isNotSelected(); // tls_verify
+		TextAssertion.assertThat(bot.text(2)).isEnabled(); // cert_path
+		ButtonAssertion.assertThat(bot.button(0)).isEnabled(); // test_connection
+		
 	}
-
-	@Test
-	public void shouldShowDefaultUnixSocketConnectionSettingsWithValidConnectionAvailable() {
-		// given
-		MockDockerConnectionSettingsFinder.validUnixSocketConnectionAvailable();
-		// when
-		addConnectionButton.click();
-		// TODO: should wait until dialog appears.
-		// then
-		// Connection name
-		TextAssertion.assertThat(bot.text(0)).isEnabled().textEquals("mock");
-		// "Use custom connection settings" should be enabled but unchecked
-		CheckBoxAssertion.assertThat(bot.checkBox(0)).isEnabled().isNotChecked();
-		// "Unix socket" radio should be disabled and selected
-		RadioAssertion.assertThat(bot.radio(0)).isNotEnabled().isSelected();
-		// "Unix socket path" text should be disabled and not empty
-		TextAssertion.assertThat(bot.text(1)).isNotEnabled().textEquals("unix://var/run/docker.sock");
-		// "TCP Connection" radio should be unselected and disabled
-		RadioAssertion.assertThat(bot.radio(1)).isNotEnabled().isNotSelected();
-		// "URI" should be disabled and empty
-		TextAssertion.assertThat(bot.text(2)).isNotEnabled().isEmpty();
-		// "Enable Auth" checkbox should be unselected and disabled
-		CheckBoxAssertion.assertThat(bot.checkBox(1)).isNotEnabled().isNotChecked();
-		// "Path" for certs should be disabled but not empty
-		TextAssertion.assertThat(bot.text(3)).isNotEnabled().isEmpty();
-	}
-
-	@Test
-	public void shouldShowDefaultTCPSettingsWithValidConnectionAvailable() {
-		// given
-		MockDockerConnectionSettingsFinder.validTCPConnectionAvailable();
-		// when
-		addConnectionButton.click();
-		bot.waitUntil(Conditions.shellIsActive(WizardMessages.getString("NewDockerConnection.title"))); //$NON-NLS-1$
-		// TODO: should wait until dialog appears.
-		// then
-		// Connection name
-		TextAssertion.assertThat(bot.text(0)).isEnabled().textEquals("mock");
-		// "Use custom connection settings" should be enabled but unchecked
-		CheckBoxAssertion.assertThat(bot.checkBox(0)).isEnabled().isNotChecked();
-		// "Unix socket" radio should be disabled and unselected
-		RadioAssertion.assertThat(bot.radio(0)).isNotEnabled().isNotSelected();
-		// "Unix socket path" text should be disabled and not empty
-		TextAssertion.assertThat(bot.text(1)).isNotEnabled().isEmpty();
-		// "TCP Connection" radio should be selected but diabled
-		RadioAssertion.assertThat(bot.radio(1)).isNotEnabled().isSelected();
-		// "URI" should be disabled but not empty
-		TextAssertion.assertThat(bot.text(2)).isNotEnabled().textEquals("tcp://1.2.3.4:1234");
-		// "Enable Auth" checkbox should be selected but disabled
-		CheckBoxAssertion.assertThat(bot.checkBox(1)).isNotEnabled().isChecked();
-		// "Path" for certs should be disabled but not empty
-		TextAssertion.assertThat(bot.text(3)).isNotEnabled().textEquals("/path/to/certs");
-	}
+	
 
 }

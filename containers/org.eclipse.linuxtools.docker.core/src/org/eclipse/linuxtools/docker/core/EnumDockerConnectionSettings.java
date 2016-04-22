@@ -19,5 +19,6 @@ package org.eclipse.linuxtools.docker.core;
  */
 public enum EnumDockerConnectionSettings {
 
-	BINDING_MODE, UNIX_SOCKET, TCP_CONNECTION, UNIX_SOCKET_PATH, TCP_HOST, TCP_TLS_VERIFY, TCP_CERT_PATH;
+	@Deprecated
+	BINDING_MODE, UNIX_SOCKET, UNIX_SOCKET_PATH, TCP_CONNECTION, TCP_HOST, TCP_TLS_VERIFY, TCP_CERT_PATH;
 }

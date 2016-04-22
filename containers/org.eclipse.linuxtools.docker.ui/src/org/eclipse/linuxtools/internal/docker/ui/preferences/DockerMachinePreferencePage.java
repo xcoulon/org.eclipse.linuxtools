@@ -15,7 +15,7 @@ import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.linuxtools.docker.ui.Activator;
-import org.eclipse.linuxtools.internal.docker.core.DockerMachine;
+import org.eclipse.linuxtools.internal.docker.core.DockerMachineCommandRunner;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IWorkbench;
@@ -39,7 +39,7 @@ public class DockerMachinePreferencePage extends FieldEditorPreferencePage
 	public DockerMachinePreferencePage() {
 		super(GRID);
 		setPreferenceStore(Activator.getDefault().getPreferenceStore());
-		setDescription(Messages.getString("DockerMachine.message")); //$NON-NLS-1$
+		setDescription(Messages.getString("DockerMachineCommandRunner.message")); //$NON-NLS-1$
 	}
 
 	@Override
@@ -88,7 +88,7 @@ public class DockerMachinePreferencePage extends FieldEditorPreferencePage
 	 */
 	@Override
 	public boolean isValid() {
-		if (!DockerMachine.checkPathToDockerMachine(
+		if (!DockerMachineCommandRunner.checkPathToDockerMachine(
 				this.dockerMachineInstallDir.getStringValue())) {
 			setErrorMessage(NLS.bind(
 					org.eclipse.linuxtools.docker.core.Messages.Docker_Machine_Command_Not_Found,

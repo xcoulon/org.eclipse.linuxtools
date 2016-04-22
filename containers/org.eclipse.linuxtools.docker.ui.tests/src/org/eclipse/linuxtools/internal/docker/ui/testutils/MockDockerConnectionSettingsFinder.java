@@ -16,8 +16,10 @@ import java.util.Collections;
 
 import org.eclipse.linuxtools.docker.core.DockerConnectionManager;
 import org.eclipse.linuxtools.docker.core.IDockerConnectionSettingsFinder;
+import org.eclipse.linuxtools.docker.core.IDockerRuntimesFinder;
 import org.eclipse.linuxtools.internal.docker.core.TCPConnectionSettings;
 import org.eclipse.linuxtools.internal.docker.core.UnixSocketConnectionSettings;
+import org.mockito.Matchers;
 import org.mockito.Mockito;
 
 /**
@@ -30,6 +32,7 @@ public class MockDockerConnectionSettingsFinder {
 	 * able to detect any connection to Docker daemons.
 	 * @return the mocked {@link IDockerConnectionSettingsFinder}
 	 */
+	@Deprecated
 	public static IDockerConnectionSettingsFinder noDockerConnectionAvailable() {
 		final IDockerConnectionSettingsFinder noDockerDaemonAvailable = Mockito
 				.mock(IDockerConnectionSettingsFinder.class);
@@ -41,6 +44,7 @@ public class MockDockerConnectionSettingsFinder {
 	 * Configures the {@link DockerConnectionManager} singleton to being
 	 * able to detect a <strong>valid Unix Socket</strong> to a Docker daemon.
 	 */
+	@Deprecated
 	public static void validUnixSocketConnectionAvailable() {
 		final IDockerConnectionSettingsFinder validUnixSocketConnectionAvailable = Mockito
 				.mock(IDockerConnectionSettingsFinder.class);
@@ -55,6 +59,7 @@ public class MockDockerConnectionSettingsFinder {
 	 * Configures the {@link DockerConnectionManager} singleton to being
 	 * able to detect a <strong>valid TCP Connection</strong> to a Docker daemon.
 	 */
+	@Deprecated
 	public static void validTCPConnectionAvailable() {
 		final IDockerConnectionSettingsFinder validTCPSocketConnectionAvailable = Mockito
 				.mock(IDockerConnectionSettingsFinder.class);
@@ -63,6 +68,17 @@ public class MockDockerConnectionSettingsFinder {
 		tcpConnectionSettings.setSettingsResolved(true);
 		Mockito.when(validTCPSocketConnectionAvailable.findConnectionSettings()).thenReturn(Arrays.asList(tcpConnectionSettings));
 		DockerConnectionManager.getInstance().setConnectionSettingsFinder(validTCPSocketConnectionAvailable);
+	}
+
+	/**
+	 * Configures the {@link DockerConnectionManager} singleton to not being
+	 * able to detect any Docker daemon.
+	 */
+	public static void noExistingDockerInstanceAvailable() {
+		final IDockerRuntimesFinder noDockerRuntimeAvailable = Mockito
+				.mock(IDockerRuntimesFinder.class);
+		Mockito.when(noDockerRuntimeAvailable.findExistingDockerRuntimes(Matchers.anyString(), Matchers.anyString())).thenReturn(Collections.emptyList());
+		DockerConnectionManager.getInstance().setDockerRuntimesFinder(noDockerRuntimeAvailable);
 	}
 
 }

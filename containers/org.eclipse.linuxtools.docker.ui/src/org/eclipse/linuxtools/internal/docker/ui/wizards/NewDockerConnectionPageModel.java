@@ -11,7 +11,9 @@
 
 package org.eclipse.linuxtools.internal.docker.ui.wizards;
 
-import org.eclipse.linuxtools.docker.core.EnumDockerConnectionSettings;
+import java.util.List;
+
+import org.eclipse.linuxtools.docker.core.IDockerRuntime;
 import org.eclipse.linuxtools.internal.docker.ui.databinding.BaseDatabindingModel;
 
 /**
@@ -19,52 +21,31 @@ import org.eclipse.linuxtools.internal.docker.ui.databinding.BaseDatabindingMode
  */
 public class NewDockerConnectionPageModel extends BaseDatabindingModel {
 
+	/** name of the field handling the list of available Docker instances. */
+	public static final String AVAILABLE_INSTANCES = "availableInstances"; //$NON-NLS-1$
+	/** name of the field handling the connection name. */
 	public static final String CONNECTION_NAME = "connectionName"; //$NON-NLS-1$
-	public static final String CUSTOM_SETTINGS = "customSettings"; //$NON-NLS-1$
-	public static final String UNIX_SOCKET_BINDING_MODE = "unixSocketBindingMode"; //$NON-NLS-1$
-	public static final String UNIX_SOCKET_PATH = "unixSocketPath"; //$NON-NLS-1$
-	public static final String TCP_CONNECTION_BINDING_MODE = "tcpConnectionBindingMode"; //$NON-NLS-1$
-	public static final String TCP_HOST = "tcpHost"; //$NON-NLS-1$
-	public static final String TCP_TLS_VERIFY = "tcpTLSVerify"; //$NON-NLS-1$
-	public static final String TCP_CERT_PATH = "tcpCertPath"; //$NON-NLS-1$
+	/** name of the field handling the custom settings flag. */
+	public static final String USE_CUSTOM_SETTINGS = "useCustomSettings"; //$NON-NLS-1$
+	/** name of the field handling the custom url/port. */
+	public static final String CUSTOM_HOST = "customHost"; //$NON-NLS-1$
+	/** name of the field handling the custom client auth flag. */
+	public static final String CUSTOM_TLS_VERIFY = "customTLSVerify"; //$NON-NLS-1$
+	/** name of the field handling the custom path to client certificates. */
+	public static final String CUSTOM_CERT_PATH = "customCertPath"; //$NON-NLS-1$
 
+	/** the list of available Docker instances. */
+	private List<IDockerRuntime> availableInstances;
 	/** the name of the connection. */
 	private String connectionName;
 	/** flag to indicate if custom settings are used. */
-	private boolean customSettings = false;
-	/** flag to indicate if the binding uses Unix socket. */
-	private boolean unixSocketBindingMode = false;
-	/** the path to the Unix socket (if used). */
-	private String unixSocketPath = null;
-	/** flag to indicate if the binding uses a TCP connection. */
-	private boolean tcpConnectionBindingMode = false;
-	/** the host/port (if REST API connection is used). */
-	private String tcpHost = null;
+	private boolean useCustomSettings = false;
+	/** the url/port. */
+	private String customHost = null;
 	/** flag to indicate if auth with certificates is enabled. */
-	private boolean tcpTLSVerify = false;
+	private boolean customTLSVerify = false;
 	/** path to auth certificates (if enabled). */
-	private String tcpCertPath = null;
-
-	/**
-	 * @return the binding mode (Unix socket or tcp/REST API).
-	 */
-	public EnumDockerConnectionSettings getBindingMode() {
-		if (this.unixSocketBindingMode) {
-			return EnumDockerConnectionSettings.UNIX_SOCKET;
-		}
-		return EnumDockerConnectionSettings.TCP_CONNECTION;
-	}
-
-	/**
-	 * @param bindingMode
-	 *            the binding mode (Unix socket or tcp/REST API) to set
-	 */
-	public void setBindingMode(final EnumDockerConnectionSettings bindingMode) {
-		setUnixSocketBindingMode(
-				bindingMode == EnumDockerConnectionSettings.UNIX_SOCKET);
-		setTcpConnectionBindingMode(
-				bindingMode == EnumDockerConnectionSettings.TCP_CONNECTION);
-	}
+	private String customCertPath = null;
 
 	/**
 	 * @return the name of the connection
@@ -82,94 +63,205 @@ public class NewDockerConnectionPageModel extends BaseDatabindingModel {
 				this.connectionName = connectionName);
 	}
 
-	public boolean isCustomSettings() {
-		return customSettings;
-	}
-
-	public void setCustomSettings(final boolean customSettings) {
-		firePropertyChange(CUSTOM_SETTINGS, this.customSettings,
-				this.customSettings = customSettings);
-	}
-
-	public boolean isUnixSocketBindingMode() {
-		return unixSocketBindingMode;
-	}
-
-	public void setUnixSocketBindingMode(boolean unixSocketBindingMode) {
-		firePropertyChange(UNIX_SOCKET_BINDING_MODE, this.unixSocketBindingMode,
-				this.unixSocketBindingMode = unixSocketBindingMode);
+	/**
+	 * @return flag to indicate if the connection is based on custom settings
+	 */
+	public boolean isUseCustomSettings() {
+		return useCustomSettings;
 	}
 
 	/**
-	 * @return the path to the Unix socket (if used).
+	 * Indicates if the connection is based on custom settings
+	 * 
+	 * @param useCustomSettings
+	 *            the custom settings flag
 	 */
-	public String getUnixSocketPath() {
-		return unixSocketPath;
+	public void setUseCustomSettings(final boolean useCustomSettings) {
+		firePropertyChange(USE_CUSTOM_SETTINGS, this.useCustomSettings,
+				this.useCustomSettings = useCustomSettings);
 	}
 
 	/**
-	 * @param unixSocketPath
-	 *            the path to the Unix socket (if used) to set
+	 * @return the url/port (if REST API connection is used)
 	 */
-	public void setUnixSocketPath(final String unixSocketPath) {
-		firePropertyChange(UNIX_SOCKET_PATH, this.unixSocketPath,
-				this.unixSocketPath = unixSocketPath);
-	}
-
-	public boolean isTcpConnectionBindingMode() {
-		return tcpConnectionBindingMode;
-	}
-
-	public void setTcpConnectionBindingMode(boolean tcpBindingMode) {
-		firePropertyChange(TCP_CONNECTION_BINDING_MODE, this.tcpConnectionBindingMode,
-				this.tcpConnectionBindingMode = tcpBindingMode);
+	public String getCustomHost() {
+		return customHost;
 	}
 
 	/**
-	 * @return the host/port (if REST API connection is used)
+	 * @param customHost
+	 *            the url/port (if REST API connection is used) to set
 	 */
-	public String getTcpHost() {
-		return tcpHost;
-	}
-
-	/**
-	 * @param tcpHost
-	 *            the host/port (if REST API connection is used) to set
-	 */
-	public void setTcpHost(final String tcpHost) {
-		firePropertyChange(TCP_HOST, this.tcpHost, this.tcpHost = tcpHost);
+	public void setCustomHost(final String customHost) {
+		firePropertyChange(CUSTOM_HOST, this.customHost,
+				this.customHost = customHost);
 	}
 
 	/**
 	 * @return flag to indicate if auth with certificates is enabled
 	 */
-	public boolean isTcpTLSVerify() {
-		return tcpTLSVerify;
+	public boolean isCustomTLSVerify() {
+		return customTLSVerify;
 	}
 
 	/**
-	 * @param tcpTLSVerify
+	 * @param customTLSVerify
 	 *            flag to indicate if auth with certificates is enabled
 	 */
-	public void setTcpTLSVerify(final boolean tcpTLSVerify) {
-		firePropertyChange(TCP_TLS_VERIFY, this.tcpTLSVerify,
-				this.tcpTLSVerify = tcpTLSVerify);
+	public void setCustomTLSVerify(final boolean customTLSVerify) {
+		firePropertyChange(CUSTOM_TLS_VERIFY, this.customTLSVerify,
+				this.customTLSVerify = customTLSVerify);
 	}
 
 	/**
 	 * @return path to auth certificates (if enabled)
 	 */
-	public String getTcpCertPath() {
-		return tcpCertPath;
+	public String getCustomCertPath() {
+		return customCertPath;
 	}
 
 	/**
-	 * @param tcpCertPath
+	 * @param customCertPath
 	 *            path to auth certificates (if enabled) to set
 	 */
-	public void setTcpCertPath(final String tcpCertPath) {
-		firePropertyChange(TCP_CERT_PATH, this.tcpCertPath,
-				this.tcpCertPath = tcpCertPath);
+	public void setCustomCertPath(final String customCertPath) {
+		firePropertyChange(CUSTOM_CERT_PATH, this.customCertPath,
+				this.customCertPath = customCertPath);
 	}
 
+	/**
+	 * @return the list of available Docker instances.
+	 */
+	public List<IDockerRuntime> getAvailableInstances() {
+		return availableInstances;
+	}
+
+	/**
+	 * @param availableInstances
+	 *            the list of available Docker instances.
+	 */
+	public void setAvailableInstances(
+			final List<IDockerRuntime> availableInstances) {
+		firePropertyChange(AVAILABLE_INSTANCES, this.availableInstances,
+				this.availableInstances = availableInstances);
+	}
+
+	/**
+	 * An existing Docker instance. May be available or not, depending on its
+	 * state.
+	 */
+	@Deprecated
+	public static class DockerInstance {
+
+		/** The type of the instance (native, Docker Machine). */
+		private final String type;
+		/** The name of the instance. */
+		private final String name;
+		/** The URL to connect to (can be a Unix socket, too). */
+		private final String url;
+		/** The flag to enable auth. */
+		private final boolean useAuth;
+		/** The path to certificates (or null if auth is disabled). */
+		private final String pathToCertificates;
+		/** The instance state (or <code>null</code> if unknown). */
+		private final String state;
+		/** The version of Docker (or <code>null</code> if unknown). */
+		private final String version;
+		/**
+		 * The errors if any known or <code>null</code> if none was reported.
+		 */
+		private final String errors;
+
+		/**
+		 * Constructor.
+		 * 
+		 * @param type
+		 *            the type of the instance.
+		 * @param name
+		 *            the name of the instance.
+		 * @param url
+		 *            the url to connect to (can be a Unix socket, too).
+		 * @param useAuth
+		 *            the flag to enable auth.
+		 * @param pathToCertificates
+		 *            the path to certificates (or null if auth is disabled).
+		 * @param state
+		 *            the instance state.
+		 * @param version
+		 *            the version of Docker (or <code>null</code> if unknown).
+		 * @param errors
+		 *            the errors if any or <code>null</code> if none was
+		 *            reported.
+		 */
+		public DockerInstance(final String type, final String name,
+				final String url, final boolean useAuth,
+				final String pathToCertificates, final String state,
+				final String version, final String errors) {
+			this.type = type;
+			this.name = name;
+			this.url = url;
+			this.useAuth = useAuth;
+			this.pathToCertificates = pathToCertificates;
+			this.state = state;
+			this.version = version;
+			this.errors = errors;
+		}
+
+		/**
+		 * @return the type of the instance.
+		 */
+		public String getType() {
+			return type;
+		}
+
+		/**
+		 * @return the name of the instance.
+		 */
+		public String getName() {
+			return name;
+		}
+
+		/**
+		 * @return the url to connect to (can be a Unix socket, too).
+		 */
+		public String getUrl() {
+			return url;
+		}
+
+		/**
+		 * @return the flag to enable auth.
+		 */
+		public boolean isUseAuth() {
+			return useAuth;
+		}
+
+		/**
+		 * @return the path to certificates (or null if auth is disabled).
+		 */
+		public String getPathToCertificates() {
+			return pathToCertificates;
+		}
+
+		/**
+		 * @return the instance state.
+		 */
+		public String getState() {
+			return state;
+		}
+
+		/**
+		 * @return the version of Docker (or <code>null</code> if unknown).
+		 */
+		public String getVersion() {
+			return version;
+		}
+
+		/**
+		 * @return the errors if any or <code>null</code> if none was reported.
+		 */
+		public String getErrors() {
+			return errors;
+		}
+
+	}
 }

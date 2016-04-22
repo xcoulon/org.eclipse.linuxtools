@@ -49,6 +49,7 @@ import jnr.unixsocket.UnixSocketChannel;
  * A utility class that looks for candidate {@link IDockerConnection}s on the
  * host system.
  */
+@Deprecated
 public class DefaultDockerConnectionSettingsFinder
 		implements IDockerConnectionSettingsFinder {
 
